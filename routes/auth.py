@@ -20,7 +20,7 @@ load_dotenv()
 JWT_SECRET = os.getenv("JWT_SECRET")
 # GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
-JWT_EXP_HOURS = int(os.getenv("JWT_EXP_HOURS"))
+JWT_EXP_HOURS = 24
 # ====== JWT認証デコレーター ======
 # def jwt_required(f):
 #     @wraps(f)
