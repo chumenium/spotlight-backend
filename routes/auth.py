@@ -21,54 +21,24 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 # GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXP_HOURS = 24
-# ====== JWT認証デコレーター ======
-def jwt_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Missing or invalid Authorization header"}), 401
-        token = auth_header.split(" ")[1]
-        try:
-            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        except jwt.ExpiredSignatureError:
-            return jsonify({"error": "Token has expired"}), 401
-        except jwt.InvalidTokenError:
-            return jsonify({"error": "Invalid token"}), 401
-        request.user = payload
-        return f(*args, **kwargs)
-    return decorated_function
+
+
+# ====== Firebase初期化（アプリ起動時に一度だけ） ======
+try:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    cred_path = os.path.join(BASE_DIR, "spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
+
+    if not firebase_admin._apps:  # ← 二重初期化防止
+        cred = credentials.Certificate(cred_path)
+        firebase_admin.initialize_app(cred)
+        print("✅ Firebase Admin SDK initialized successfully.")
+
+except Exception as e:
+    print(f"⚠️ Firebase初期化エラー: {e}")
+
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
-
-# Firebase初期化（アプリ起動時に一度だけ）
-# 環境変数からFirebase設定を取得
-firebase_config_path = os.getenv("FIREBASE_CONFIG_PATH")
-if firebase_config_path and os.path.exists(firebase_config_path):
-    cred = credentials.Certificate(firebase_config_path)
-    firebase_admin.initialize_app(cred)
-else:
-    # 環境変数から直接設定を取得（本番環境推奨）
-    firebase_config = {
-        "type": "service_account",
-        "project_id": os.getenv("FIREBASE_PROJECT_ID"),
-        "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
-        "private_key": os.getenv("FIREBASE_PRIVATE_KEY", "").replace("\\n", "\n"),
-        "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
-        "client_id": os.getenv("FIREBASE_CLIENT_ID"),
-        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-        "token_uri": "https://oauth2.googleapis.com/token",
-        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-        "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
-    }
-    
-    # 必要な設定がすべて揃っている場合のみ初期化
-    if all([firebase_config["project_id"], firebase_config["private_key"], firebase_config["client_email"]]):
-        cred = credentials.Certificate(firebase_config)
-        firebase_admin.initialize_app(cred)
-    else:
-        print("警告: Firebase設定が不完全です。環境変数を確認してください。")
 # ====== Firebase認証 → DB登録 → JWT発行 ======
 @auth_bp.route("/firebase", methods=["POST"])
 def firebase_auth():
@@ -102,6 +72,28 @@ def firebase_auth():
     except Exception as e:
         print("🔥 Firebase認証エラー:", e)  # ← ここ追加！
         return jsonify({"error": str(e)}), 400
+
+
+
+# ====== JWT認証デコレーター ======
+def jwt_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid Authorization header"}), 401
+        token = auth_header.split(" ")[1]
+        try:
+            payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        except jwt.ExpiredSignatureError:
+            return jsonify({"error": "Token has expired"}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({"error": "Invalid token"}), 401
+        request.user = payload
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 
 # ====== 通知トークン更新 ======
 @auth_bp.route("/api/update_token", methods=["POST"])
