@@ -43,8 +43,32 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
 # Firebase初期化（アプリ起動時に一度だけ）
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # このファイルのあるディレクトリ
-cred_path = os.path.join(BASE_DIR, "spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
+# 環境変数からFirebase設定を取得
+firebase_config_path = os.getenv("FIREBASE_CONFIG_PATH")
+if firebase_config_path and os.path.exists(firebase_config_path):
+    cred = credentials.Certificate(firebase_config_path)
+    firebase_admin.initialize_app(cred)
+else:
+    # 環境変数から直接設定を取得（本番環境推奨）
+    firebase_config = {
+        "type": "service_account",
+        "project_id": os.getenv("FIREBASE_PROJECT_ID"),
+        "private_key_id": os.getenv("FIREBASE_PRIVATE_KEY_ID"),
+        "private_key": os.getenv("FIREBASE_PRIVATE_KEY", "").replace("\\n", "\n"),
+        "client_email": os.getenv("FIREBASE_CLIENT_EMAIL"),
+        "client_id": os.getenv("FIREBASE_CLIENT_ID"),
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://oauth2.googleapis.com/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "client_x509_cert_url": os.getenv("FIREBASE_CLIENT_X509_CERT_URL")
+    }
+    
+    # 必要な設定がすべて揃っている場合のみ初期化
+    if all([firebase_config["project_id"], firebase_config["private_key"], firebase_config["client_email"]]):
+        cred = credentials.Certificate(firebase_config)
+        firebase_admin.initialize_app(cred)
+    else:
+        print("警告: Firebase設定が不完全です。環境変数を確認してください。")
 # ====== Firebase認証 → DB登録 → JWT発行 ======
 @auth_bp.route("/firebase", methods=["POST"])
 def firebase_auth():
