@@ -43,8 +43,8 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 
 # Firebase初期化（アプリ起動時に一度だけ）
-cred = credentials.Certificate("spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
-firebase_admin.initialize_app(cred)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # このファイルのあるディレクトリ
+cred_path = os.path.join(BASE_DIR, "spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
 # ====== Firebase認証 → DB登録 → JWT発行 ======
 @auth_bp.route("/firebase", methods=["POST"])
 def firebase_auth():
