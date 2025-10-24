@@ -100,6 +100,7 @@ def firebase_auth():
         })
 
     except Exception as e:
+        print("🔥 Firebase認証エラー:", e)  # ← ここ追加！
         return jsonify({"error": str(e)}), 400
 
 # ====== 通知トークン更新 ======
