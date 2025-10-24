@@ -42,3 +42,9 @@ build/
 dist/
 *.egg-info/
 
+# 認証情報・秘密鍵ファイル
+*.json
+firebase-adminsdk-*.json
+*-firebase-adminsdk-*.json
+service-account-*.json
+
