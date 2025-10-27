@@ -235,7 +235,6 @@ def register_username(userID,token):
             
 
         # 登録処理
-        userID = str("testUser" + str(random.randint(1, 1000000)))
         cur.execute("INSERT INTO \"user\" (userID,username,token) VALUES (%s,%s,%s)", (userID,username,token))
         conn.commit()
         print(f"'{username}' を新規登録しました。")
