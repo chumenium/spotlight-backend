@@ -20,7 +20,7 @@ from routes.playlists import playlists_bp
 from routes.playhistory import playhistory_bp
 import firebase_admin
 from firebase_admin import credentials
-
+from models.connection_pool import init_connection_pool, close_all_connections
 
 # ====== Firebase初期化（アプリ起動時に一度だけ） ======
 try:
@@ -35,6 +35,8 @@ try:
 except Exception as e:
     print(f"⚠️ Firebase初期化エラー: {e}")
 
+# ====== コネクションプール作成コネクションプール作成（アプリ起動時に一度だけ） ======
+init_connection_pool()
 
 def create_app(config_name='default'):
     """
@@ -181,6 +183,12 @@ def create_app(config_name='default'):
 
 # アプリケーションインスタンスの作成
 app = create_app(os.getenv('FLASK_ENV', 'development'))
+
+
+# Flask終了時にクリーンアップ（開発時は呼ばれない場合もある）
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    close_all_connections()
 
 if __name__ == '__main__':
     # 開発サーバーの起動

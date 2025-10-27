@@ -199,25 +199,12 @@ def create_username():
 
 import psycopg2
 import os
-
-# DB接続設定
-DB_NAME = os.getenv("DB_NAME")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
+from models.connection_pool import get_connection, release_connection
 
 def register_username(userID,token):
     """ユーザ名が存在しなければ登録する"""
     try:
-        # PostgreSQLへ接続
-        conn = psycopg2.connect(
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            host=DB_HOST,
-            port=DB_PORT
-        )
+        conn = get_connection()
         cur = conn.cursor()
 
         # ユーザ名の存在確認
@@ -240,8 +227,7 @@ def register_username(userID,token):
         print(f"'{username}' を新規登録しました。")
 
         # 終了処理
-        cur.close()
-        conn.close()
+        release_connection(conn)
 
     except psycopg2.Error as e:
         print("データベースエラー:", e)

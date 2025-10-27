@@ -137,6 +137,7 @@ CREATE TABLE contentuser (
 CREATE TABLE playlist (
     userID VARCHAR(512) REFERENCES "user"(userID),
     playlistID SERIAL,
+    title VARCHAR(128),
     PRIMARY KEY (userID, playlistID)
 );
 CREATE TABLE playlistdetail (
