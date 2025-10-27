@@ -25,7 +25,7 @@ from firebase_admin import credentials
 # ====== Firebase初期化（アプリ起動時に一度だけ） ======
 try:
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    cred_path = os.path.join(BASE_DIR, "/spotlight/spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
+    cred_path = os.path.join(BASE_DIR, "/spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
 
     if not firebase_admin._apps:  # ← 二重初期化防止
         cred = credentials.Certificate(cred_path)
