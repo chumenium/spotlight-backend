@@ -22,7 +22,7 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXP_HOURS = 24
 
-if JWT_ALGORITHM != None:
+if JWT_ALGORITHM != None and JWT_SECRET != None:
     print("✅ envfile read successfully")
 else:
     print("⚠️ envfile read エラー")
