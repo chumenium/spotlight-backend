@@ -3,7 +3,7 @@
 ユーザー登録、ログイン、Google認証など
 """
 from flask import Blueprint, request, jsonify
-from models.create_username import create_username
+from models.create_username import register_username
 from utils.auth import generate_jwt_token, verify_google_token
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
@@ -46,7 +46,7 @@ def firebase_auth():
         firebase_uid = decoded_token["uid"]
 
         # DBに登録（ユーザ作成 or 更新）
-        create_username(firebase_uid, token)
+        register_username(firebase_uid, token)
 
         # JWT発行
         jwt_token = jwt.encode({
