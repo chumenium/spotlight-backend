@@ -1,6 +1,11 @@
 import psycopg2
 import os
 
+"""
+"postgres"
+"kcsf"
+"""
+
 # DB接続設定
 DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
@@ -81,7 +86,8 @@ def user_exists(userID):
         print("データベースエラー:", e)
         return False
 
-def get_user_name(userID):
+#ユーザネームとアイコン画像のパスを取得
+def get_user_name_iconpath(userID):
     try:
         conn = psycopg2.connect(
             dbname=DB_NAME,
@@ -91,13 +97,37 @@ def get_user_name(userID):
             port=DB_PORT
         )
         cur = conn.cursor()
-        cur.execute('SELECT username FROM "user" WHERE userID = %s', (userID,))
-        username = cur.fetchone()[0]
+        cur.execute('SELECT username,iconimgpath FROM "user" WHERE userID = %s', (userID,))
+        userdate = cur.fetchone()
+        username = userdate[0]
+        usericonimgpath = userdate[1]
         cur.close()
         conn.close()
-        return username
+        return username,usericonimgpath
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return False
 
-get_user_name("xonEecR0o2OcyDU9JJQXGBT3pYg2")
+#ユーザごとの投稿を取得
+def get_user_post(userID):
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        ここで中断
+        cur = conn.cursor()
+        cur.execute('SELECT username,iconimgpath FROM content WHERE userID = %s', (userID,))
+        userdate = cur.fetchone()
+        username = userdate[0]
+        usericonimgpath = userdate[1]
+        cur.close()
+        conn.close()
+        return username,usericonimgpath
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return False
+#get_user_name_iconpath("xonEecR0o2OcyDU9JJQXGBT3pYg2")
