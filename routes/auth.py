@@ -27,19 +27,6 @@ if JWT_ALGORITHM != None and JWT_SECRET != None:
 else:
     print("⚠️ envfile read エラー")
 
-# ====== Firebase初期化（アプリ起動時に一度だけ） ======
-try:
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    cred_path = os.path.join(BASE_DIR, "spotlight-597c4-firebase-adminsdk-fbsvc-8820bfe6ef.json")
-
-    if not firebase_admin._apps:  # ← 二重初期化防止
-        cred = credentials.Certificate(cred_path)
-        firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin SDK initialized successfully.")
-
-except Exception as e:
-    print(f"⚠️ Firebase初期化エラー: {e}")
-
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
