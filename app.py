@@ -76,8 +76,9 @@ def create_app(config_name='default'):
     @app.route('/test', methods=['GET'])
     def test():
         try:
-            data = request.get_json()
-            userid = data.get("userid")
+            # data = request.get_json()
+            # userid = data.get("userid")
+            userid = request.args.get('userid')
             username = get_user_name(userid)
 
             return jsonify({
