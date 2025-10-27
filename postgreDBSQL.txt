@@ -109,6 +109,7 @@ CREATE TABLE content (
     contentID SERIAL PRIMARY KEY,
     spotlightnum INTEGER,
     contentpath VARCHAR(128),
+    thumbnailpath VARCHAR(128),
     link VARCHAR(128),
     title VARCHAR(128),
     posttimestamp TIMESTAMP,

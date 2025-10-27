@@ -71,6 +71,24 @@ def create_app(config_name='default'):
     app.register_blueprint(playlists_bp)
     app.register_blueprint(playhistory_bp)
     
+    from flask import Blueprint, request, jsonify
+    from models.userdate import get_user_name
+    @app.route('/test', methods=['GET'])
+    def test():
+        try:
+            data = request.get_json()
+            userid = data.get("userid")
+            username = get_user_name(userid)
+
+            return jsonify({
+                "status": "success",
+                "username": username
+            })
+        except Exception as e:
+            print("エラー:", e)
+            return jsonify({"error": str(e)}), 400
+
+
     # ヘルスチェックエンドポイント
     @app.route('/api/health', methods=['GET'])
     def health_check():

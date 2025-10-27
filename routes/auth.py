@@ -4,9 +4,8 @@
 """
 from flask import Blueprint, request, jsonify
 from models.create_username import register_username
+from models.userdate import update_FMCtoken, get_user_by_id, user_exists
 from utils.auth import generate_jwt_token, verify_google_token
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
 import jwt
 import datetime
 import psycopg2
@@ -94,225 +93,79 @@ def update_token():
     new_token = data.get("token")
     if not new_token:
         return jsonify({"error": "token is required"}), 400
-
-    uid = request.user["firebase_uid"]
-
-    # conn = get_db_connection()
-    # cur = conn.cursor()
-    # cur.execute("UPDATE \"user\" SET token = %s WHERE userID = %s", (new_token, uid))
-    # conn.commit()
-    # cur.close()
-    # conn.close()
-
-    return jsonify({"status": "updated"})
-
-
-
-@auth_bp.route('/register', methods=['POST'])
-def register():
-    """
-    ユーザー登録
-    
-    Request Body:
-        {
-            "nickname": "ユーザー名",
-            "email": "user@example.com",
-            "password": "password123"
-        }
-    
-    Returns:
-        JSON: ユーザー情報とJWTトークン
-    """
     try:
-        data = request.get_json()
-        nickname = data.get('nickname')
-        email = data.get('email')
-        password = data.get('password')
-        
-        # バリデーション
-        if not all([nickname, email, password]):
-            return jsonify({
-                'success': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'All fields are required'
-                }
-            }), 400
-        
-        # TODO: DB担当メンバーがユーザー登録処理を実装
-        # - パスワードのハッシュ化
-        # - ユーザーの重複チェック
-        # - データベースへの保存
-        
-        # モックレスポンス
-        user_data = {
-            'id': 'user_mock_123',
-            'nickname': nickname,
-            'email': email,
-            'profileImageUrl': None,
-            'createdAt': '2024-01-01T00:00:00Z'
-        }
-        
-        # JWTトークン生成
-        token = generate_jwt_token({
-            'user_id': user_data['id'],
-            'email': email,
-            'nickname': nickname
-        })
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'user': user_data,
-                'token': token
-            }
-        }), 201
-        
+        uid = request.user["firebase_uid"]
+        update_FMCtoken(new_token,uid)
+
+        return jsonify({"status": "updated"})
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': {
-                'code': 'SERVER_ERROR',
-                'message': str(e)
-            }
-        }), 500
+        print("エラー:", e)
+        return jsonify({"error": str(e)}), 400
+
 
 @auth_bp.route('/login', methods=['POST'])
 def login():
     """
-    ログイン
+    ログイン処理
+    Firebase IDトークンを使用してログインし、JWTを返す
     
     Request Body:
         {
-            "email": "user@example.com",
-            "password": "password123"
+            "id_token": "Firebase ID token",
+            "token": "通知用トークン（オプショナル）"
         }
     
     Returns:
         JSON: ユーザー情報とJWTトークン
     """
-    try:
-        data = request.get_json()
-        email = data.get('email')
-        password = data.get('password')
-        
-        # バリデーション
-        if not all([email, password]):
-            return jsonify({
-                'success': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'Email and password are required'
-                }
-            }), 400
-        
-        # TODO: DB担当メンバーがログイン処理を実装
-        # - ユーザーの存在確認
-        # - パスワードの検証
-        # - ユーザー情報の取得
-        
-        # モックレスポンス
-        user_data = {
-            'id': 'user_mock_123',
-            'nickname': 'テストユーザー',
-            'email': email,
-            'profileImageUrl': 'https://example.com/avatar.jpg',
-            'followersCount': 100,
-            'followingCount': 50,
-            'postsCount': 25
-        }
-        
-        # JWTトークン生成
-        token = generate_jwt_token({
-            'user_id': user_data['id'],
-            'email': email,
-            'nickname': user_data['nickname']
-        })
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'user': user_data,
-                'token': token
-            }
-        }), 200
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': {
-                'code': 'SERVER_ERROR',
-                'message': str(e)
-            }
-        }), 500
-
-@auth_bp.route('/google', methods=['POST'])
-def google_auth():
-    """
-    Google認証
+    data = request.get_json()
+    id_token_str = data.get("id_token")
+    notification_token = data.get("token")
     
-    Request Body:
-        {
-            "id_token": "google_id_token_here"
-        }
+    if not id_token_str:
+        return jsonify({"error": "id_token is required"}), 400
     
-    Returns:
-        JSON: ユーザー情報とJWTトークン
-    """
     try:
-        data = request.get_json()
-        id_token = data.get('id_token')
+        # Firebaseトークンを検証
+        decoded_token = auth.verify_id_token(id_token_str)
+        firebase_uid = decoded_token["uid"]
         
-        if not id_token:
-            return jsonify({
-                'success': False,
-                'error': {
-                    'code': 'VALIDATION_ERROR',
-                    'message': 'id_token is required'
-                }
-            }), 400
+        # DBにユーザーが存在するか確認
+        if not user_exists(firebase_uid):
+            # ユーザーが存在しない場合は新規登録
+            if notification_token:
+                register_username(firebase_uid, notification_token)
+            else:
+                register_username(firebase_uid, None)
         
-        # Googleトークンの検証
-        google_user = verify_google_token(id_token)
+        # ユーザー情報を取得
+        user = get_user_by_id(firebase_uid)
         
-        # TODO: DB担当メンバーがGoogle認証処理を実装
-        # - Googleアカウント情報でユーザー検索
-        # - 存在しない場合は新規作成
-        # - ユーザー情報の取得
+        if not user:
+            return jsonify({"error": "User not found"}), 404
         
-        # JWTトークン生成
-        token = generate_jwt_token({
-            'google_id': google_user['google_id'],
-            'email': google_user['email'],
-            'name': google_user['name']
+        # 通知トークンの更新（提供されている場合）
+        if notification_token:
+            update_FMCtoken(notification_token, firebase_uid)
+        
+        # JWT発行
+        jwt_token = jwt.encode({
+            "firebase_uid": firebase_uid,
+            "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=JWT_EXP_HOURS)
+        }, JWT_SECRET, algorithm=JWT_ALGORITHM)
+        
+        return jsonify({
+            "status": "success",
+            "jwt": jwt_token,
+            "firebase_uid": firebase_uid,
+            "user": {
+                "username": user["username"],
+                "iconimgpath": user["iconimgpath"],
+                "notificationenabled": user["notificationenabled"]
+            }
         })
-        
-        return jsonify({
-            'success': True,
-            'data': {
-                'user': {
-                    'email': google_user['email'],
-                    'name': google_user['name'],
-                    'picture': google_user['picture']
-                },
-                'token': token
-            }
-        }), 200
-        
-    except ValueError:
-        return jsonify({
-            'success': False,
-            'error': {
-                'code': 'AUTHENTICATION_ERROR',
-                'message': 'Invalid Google token'
-            }
-        }), 400
+    
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': {
-                'code': 'SERVER_ERROR',
-                'message': str(e)
-            }
-        }), 500
+        print("🔥 ログインエラー:", e)
+        return jsonify({"error": str(e)}), 400
 

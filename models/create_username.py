@@ -245,7 +245,3 @@ def register_username(userID,token):
 
     except psycopg2.Error as e:
         print("データベースエラー:", e)
-
-# 使用例
-if __name__ == "__main__":
-    register_username()
