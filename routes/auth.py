@@ -22,6 +22,10 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXP_HOURS = 24
 
+if JWT_ALGORITHM != None:
+    print("✅ envfile read successfully")
+else:
+    print("⚠️ envfile read エラー")
 
 # ====== Firebase初期化（アプリ起動時に一度だけ） ======
 try:
