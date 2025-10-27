@@ -92,11 +92,12 @@ def get_user_name(userID):
         )
         cur = conn.cursor()
         cur.execute('SELECT username FROM "user" WHERE userID = %s', (userID,))
-        count = cur.fetchone()[0]
+        username = cur.fetchone()[0]
         cur.close()
         conn.close()
-        print(count["username"])
-        return count["username"]
+        return username
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return False
+
+get_user_name("xonEecR0o2OcyDU9JJQXGBT3pYg2")
