@@ -90,8 +90,8 @@ def get_content_id():
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("SELECT contentID FROM content")
-            row = cur.fetchall()
-        return list(row)
+            rows = cur.fetchall()
+        return [r[0] for r in rows]
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return None
