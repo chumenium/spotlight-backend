@@ -13,6 +13,7 @@ from config import config
 from routes.auth import auth_bp
 from routes.posts import posts_bp
 from routes.comments import comments_bp
+from routes.contents import contents_bp
 from routes.search import search_bp
 from routes.users import users_bp
 from routes.notifications import notifications_bp
@@ -20,7 +21,7 @@ from routes.playlists import playlists_bp
 from routes.playhistory import playhistory_bp
 import firebase_admin
 from firebase_admin import credentials
-
+from models.connection_pool import init_connection_pool
 
 # ====== Firebase初期化（アプリ起動時に一度だけ） ======
 try:
@@ -34,6 +35,7 @@ try:
 
 except Exception as e:
     print(f"⚠️ Firebase初期化エラー: {e}")
+init_connection_pool()
 
 
 def create_app(config_name='default'):
@@ -65,6 +67,7 @@ def create_app(config_name='default'):
     app.register_blueprint(auth_bp)
     app.register_blueprint(posts_bp)
     app.register_blueprint(comments_bp)
+    app.register_blueprint(contents_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(notifications_bp)
