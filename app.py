@@ -10,15 +10,7 @@ import os
 from config import config
 
 # ルート（エンドポイント）のインポート
-from routes.auth import auth_bp
-from routes.posts import posts_bp
-from routes.comments import comments_bp
-from routes.contents import contents_bp
-from routes.search import search_bp
-from routes.users import users_bp
-from routes.notifications import notifications_bp
-from routes.playlists import playlists_bp
-from routes.playhistory import playhistory_bp
+
 import firebase_admin
 from firebase_admin import credentials
 from models.connection_pool import init_connection_pool
@@ -35,7 +27,7 @@ try:
 
 except Exception as e:
     print(f"⚠️ Firebase初期化エラー: {e}")
-init_connection_pool()
+
 
 
 def create_app(config_name='default'):
@@ -50,6 +42,7 @@ def create_app(config_name='default'):
     """
     # Flaskアプリケーションの初期化
     app = Flask(__name__)
+    init_connection_pool()
     
     # 設定の読み込み
     app.config.from_object(config[config_name])
@@ -63,6 +56,15 @@ def create_app(config_name='default'):
         }
     })
     
+    from routes.auth import auth_bp
+    from routes.posts import posts_bp
+    from routes.comments import comments_bp
+    from routes.contents import contents_bp
+    from routes.search import search_bp
+    from routes.users import users_bp
+    from routes.notifications import notifications_bp
+    from routes.playlists import playlists_bp
+    from routes.playhistory import playhistory_bp
     # Blueprintの登録
     app.register_blueprint(auth_bp)
     app.register_blueprint(posts_bp)
