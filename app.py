@@ -72,9 +72,9 @@ def create_app(config_name='default'):
     app.register_blueprint(playhistory_bp)
     
     from flask import Blueprint, request, jsonify
-    from models.userdate import get_user_name_iconpath
+    from models.selectdate import get_user_name_iconpath
 
-    
+
     # @app.route('/test', methods=['GET'])
     # def test():
     #     try:

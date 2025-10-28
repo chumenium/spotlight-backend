@@ -84,6 +84,21 @@ def get_user_name_iconpath(userID):
 
 #------------------------------ここから要テスト------------------------------
 
+def get_content_id():
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT contentID FROM content")
+            row = cur.fetcall()
+        return row
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
 # 1️⃣ 指定されたコンテンツIDの情報を取得
 def get_content_detail(contentID):
     conn = None
@@ -272,3 +287,23 @@ def get_playlists_with_thumbnail(userID):
             release_connection(conn)
 
 #get_user_name_iconpath("xonEecR0o2OcyDU9JJQXGBT3pYg2")
+print("-----------------------------全てのコンテンツID------------------------------------")
+print(get_content_id())
+print("-----------------------------指定したコンテンツの詳細------------------------------------")
+print(get_content_detail(1))
+print("-----------------------------指定したコンテンツのコメント------------------------------------")
+print(get_comments_by_content(1))
+print("-----------------------------指定したユーザの検索履歴------------------------------------")
+print(get_search_history("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
+print("-----------------------------指定したユーザの検索履歴------------------------------------")
+print(get_search_history("testUser1"))
+print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
+print(get_user_contents("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
+print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
+print(get_user_contents("testUser1"))
+print("-----------------------------指定したユーザがスポットライトを当てたコンテンツ------------------------------------")
+print(get_spotlight_contents("testUser1"))
+print("-----------------------------指定したユーザの再生履歴------------------------------------")
+print(get_play_history("testUser1"))
+print("-----------------------------指定したユーザのプレイリスト------------------------------------")
+print(get_playlists_with_thumbnail("testUser1"))
