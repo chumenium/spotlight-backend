@@ -20,7 +20,7 @@ from routes.playlists import playlists_bp
 from routes.playhistory import playhistory_bp
 import firebase_admin
 from firebase_admin import credentials
-from models.connection_pool import init_connection_pool, close_all_connections
+
 
 # ====== Firebase初期化（アプリ起動時に一度だけ） ======
 try:
@@ -35,8 +35,6 @@ try:
 except Exception as e:
     print(f"⚠️ Firebase初期化エラー: {e}")
 
-# ====== コネクションプール作成コネクションプール作成（アプリ起動時に一度だけ） ======
-init_connection_pool()
 
 def create_app(config_name='default'):
     """
@@ -74,22 +72,24 @@ def create_app(config_name='default'):
     app.register_blueprint(playhistory_bp)
     
     from flask import Blueprint, request, jsonify
-    from models.userdate import get_user_name
-    @app.route('/test', methods=['GET'])
-    def test():
-        try:
-            # data = request.get_json()
-            # userid = data.get("userid")
-            userid = request.args.get('userid')
-            username = get_user_name(userid)
+    from models.userdate import get_user_name_iconpath
 
-            return jsonify({
-                "status": "success",
-                "username": username
-            })
-        except Exception as e:
-            print("エラー:", e)
-            return jsonify({"error": str(e)}), 400
+    
+    # @app.route('/test', methods=['GET'])
+    # def test():
+    #     try:
+    #         # data = request.get_json()
+    #         # userid = data.get("userid")
+    #         userid = request.args.get('userid')
+    #         username = get_user_name_iconpath(userid)
+
+    #         return jsonify({
+    #             "status": "success",
+    #             "username": username
+    #         })
+    #     except Exception as e:
+    #         print("エラー:", e)
+    #         return jsonify({"error": str(e)}), 400
 
 
     # ヘルスチェックエンドポイント
@@ -183,12 +183,6 @@ def create_app(config_name='default'):
 
 # アプリケーションインスタンスの作成
 app = create_app(os.getenv('FLASK_ENV', 'development'))
-
-
-# Flask終了時にクリーンアップ（開発時は呼ばれない場合もある）
-@app.teardown_appcontext
-def shutdown_session(exception=None):
-    close_all_connections()
 
 if __name__ == '__main__':
     # 開発サーバーの起動
