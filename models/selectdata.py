@@ -101,25 +101,36 @@ def get_content_id():
 
 # 1️⃣ 指定されたコンテンツIDの情報を取得
 def get_content_detail(contentID):
+    """指定コンテンツの詳細を取得し、再生数を+1"""
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
+            # 再生回数を+1
+            cur.execute("""
+                UPDATE content
+                SET playnum = playnum + 1
+                WHERE contentID = %s;
+            """, (contentID,))
+            
+            # 詳細情報を取得
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
                        c.playnum, c.link, u.username, u.iconimgpath
                 FROM content c
                 JOIN "user" u ON c.userID = u.userID
-                WHERE c.contentID = %s
+                WHERE c.contentID = %s;
             """, (contentID,))
             row = cur.fetchone()
+        conn.commit()
         return row
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        print("❌ データベースエラー:", e)
         return None
     finally:
         if conn:
             release_connection(conn)
+
 
 
 # 2️⃣ 指定ユーザIDのコンテンツユーザからスポットライトフラグを取得
