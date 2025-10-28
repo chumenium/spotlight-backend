@@ -4,15 +4,13 @@
 """
 from flask import Blueprint, request, jsonify
 from models.create_username import register_username
-from models.userdate import update_FMCtoken, get_user_by_id, user_exists
-from utils.auth import generate_jwt_token, verify_google_token
+from models.userdate import update_FMCtoken, user_exists
+#from utils.auth import generate_jwt_token, verify_google_token
 import jwt
 import datetime
-import psycopg2
 from functools import wraps
 from dotenv import load_dotenv
 import os
-import firebase_admin
 from firebase_admin import credentials, auth
 from utils.auth import jwt_required
 
