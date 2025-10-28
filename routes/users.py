@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdate import get_user_name_iconpath
+from models.selectdata import get_user_name_iconpath
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 

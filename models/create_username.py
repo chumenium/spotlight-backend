@@ -201,33 +201,48 @@ import psycopg2
 import os
 from models.connection_pool import get_connection, release_connection
 
-def register_username(userID,token):
-    """ユーザ名が存在しなければ登録する"""
+
+def register_username(userID, token):
+    """ユーザ名が存在しなければ登録し、全コンテンツと紐付け"""
+    conn = None
     try:
         conn = get_connection()
         cur = conn.cursor()
 
-        # ユーザ名の存在確認
+        # ====== ユーザ名生成・重複確認 ======
         username = create_username()
+        i = 0
         while True:
-            try:
-                cur.execute("SELECT 1 FROM \"user\" WHERE username = %s", (username,))
-                row = cur.fetchone()
-                if row is None:
-                    break
-                else:
-                    username = create_username()
-            except:
+            cur.execute('SELECT 1 FROM "user" WHERE username = %s', (username,))
+            row = cur.fetchone()
+            if row is None:
                 break
-            
+            else:
+                username = create_username()
+                i += 1
+                if i > 3:
+                    username = f"{username}{random.randint(1, 999)}"
 
-        # 登録処理
-        cur.execute("INSERT INTO \"user\" (userID,username,token) VALUES (%s,%s,%s)", (userID,username,token))
+        # ====== ユーザ登録 ======
+        cur.execute("""
+            INSERT INTO "user" (userID, username, token)
+            VALUES (%s, %s, %s);
+        """, (userID, username, token))
+
+        # ====== 全コンテンツと自動紐付け（CROSS JOINで高速化） ======
+        cur.execute("""
+            INSERT INTO contentuser (contentID, userID)
+            SELECT c.contentID, %s AS userID
+            FROM content AS c;
+        """, (userID,))
+
         conn.commit()
-        print(f"'{username}' を新規登録しました。")
-
-        # 終了処理
-        release_connection(conn)
+        print(f"✅ ユーザ '{username}' を新規登録し、全コンテンツと紐付けました。")
 
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        print("❌ データベースエラー:", e)
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            release_connection(conn)
