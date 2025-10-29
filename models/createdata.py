@@ -3,7 +3,7 @@ from models.connection_pool import get_connection, release_connection
 
 
 #----------------コンテンツを追加----------------
-def add_content_and_link_to_users(contentpath, thumbnailpath, link, title, userID):
+def add_content_and_link_to_users(contentpath, link, title, userID, thumbnailpath=None, textflag=None):
     """コンテンツを追加し、全ユーザと紐付け"""
     try:
         conn = get_connection()
@@ -11,10 +11,10 @@ def add_content_and_link_to_users(contentpath, thumbnailpath, link, title, userI
 
         # コンテンツ追加
         cur.execute("""
-            INSERT INTO content (contentpath, thumbnailpath, link, title, userID)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO content (contentpath, thumbnailpath, link, title, userID,textflag)
+            VALUES (%s, %s, %s, %s, %s,%s)
             RETURNING contentID;
-        """, (contentpath, thumbnailpath, link, title, userID))
+        """, (contentpath, thumbnailpath, link, title, userID,textflag))
         content_id = cur.fetchone()[0]
 
         # 全ユーザと紐付け（CROSS JOINで一括登録）

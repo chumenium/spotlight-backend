@@ -30,59 +30,71 @@ def add_content():
         data = request.get_json()
 
         # --- 受信データ ---
-        content_type = data.get("type")      # "video" | "image" | "audio"
+        content_type = data.get("type")      # "video" | "image" | "audio" | "text"
         title = data.get("title")
         link = data.get("link")
-        file_data = data.get("file")         # base64文字列（コンテンツ本体）
-        thumb_data = data.get("thumbnail")   # base64文字列（サムネイル）
 
-        if not all([content_type, title, file_data, thumb_data]):
-            return jsonify({
-                "status": "error",
-                "message": "必要なデータが不足しています"
-            }), 400
+        if content_type != "text":
 
-        # --- パス設定 ---
-        base_dir = os.path.join(current_app.root_path, "content")
-        subdirs = {
-            "video": "movie",
-            "image": "picture",
-            "audio": "audio",
-            "thumbnail": "thumbnail"
-        }
-        for sub in subdirs.values():
-            os.makedirs(os.path.join(base_dir, sub), exist_ok=True)
+            file_data = data.get("file")         # base64文字列（コンテンツ本体）
+            thumb_data = data.get("thumbnail")   # base64文字列（サムネイル）
+            if not all([content_type, title, file_data, thumb_data]):
+                return jsonify({
+                    "status": "error",
+                    "message": "必要なデータが不足しています"
+                }), 400
 
-        # --- ファイル名作成 ---
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        filename_base = f"{uid}_{timestamp}"
+            # --- パス設定 ---
+            base_dir = os.path.join(current_app.root_path, "content")
+            subdirs = {
+                "video": "movie",
+                "image": "picture",
+                "audio": "audio",
+                "thumbnail": "thumbnail"
+            }
+            for sub in subdirs.values():
+                os.makedirs(os.path.join(base_dir, sub), exist_ok=True)
 
-        # --- ファイル拡張子設定 ---
-        ext_map = {"video": "mp4", "image": "jpg", "audio": "mp3"}
-        ext = ext_map.get(content_type, "dat")
+            # --- ファイル名作成 ---
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            filename_base = f"{uid}_{timestamp}"
 
-        # --- ファイル保存 ---
-        content_rel_path = f"content/{subdirs[content_type]}/{filename_base}.{ext}"
-        thumb_rel_path = f"content/thumbnail/{filename_base}_thumb.jpg"
+            # --- ファイル拡張子設定 ---
+            ext_map = {"video": "mp4", "image": "jpg", "audio": "mp3"}
+            ext = ext_map.get(content_type, "dat")
 
-        content_abs_path = os.path.join(current_app.root_path, content_rel_path)
-        thumb_abs_path = os.path.join(current_app.root_path, thumb_rel_path)
+            # --- ファイル保存 ---
+            content_rel_path = f"content/{subdirs[content_type]}/{filename_base}.{ext}"
+            thumb_rel_path = f"content/thumbnail/{filename_base}_thumb.jpg"
 
-        # Base64 → バイナリ書き込み
-        with open(content_abs_path, "wb") as f:
-            f.write(base64.b64decode(file_data))
+            content_abs_path = os.path.join(current_app.root_path, content_rel_path)
+            thumb_abs_path = os.path.join(current_app.root_path, thumb_rel_path)
 
-        with open(thumb_abs_path, "wb") as f:
-            f.write(base64.b64decode(thumb_data))
+            # Base64 → バイナリ書き込み
+            with open(content_abs_path, "wb") as f:
+                f.write(base64.b64decode(file_data))
 
-        # --- DB登録 ---
-        content_id = add_content_and_link_to_users(
-            contentpath=content_rel_path,
-            thumbnailpath=thumb_rel_path,
-            link=link,
-            title=title,
-            userID=uid
-        )
+            with open(thumb_abs_path, "wb") as f:
+                f.write(base64.b64decode(thumb_data))
+
+            # --- DB登録 ---
+            content_id = add_content_and_link_to_users(
+                contentpath=content_rel_path,
+                thumbnailpath=thumb_rel_path,
+                link=link,
+                title=title,
+                userID=uid
+            )
+        else:
+            text = data.get("text") 
+            #--- DB登録(text) ---
+            content_id = add_content_and_link_to_users(
+                contentpath=text,
+                link=link,
+                title=title,
+                userID=uid,
+                textflag="TRUE"
+            )
 
         return jsonify({
             "status": "success",
@@ -144,7 +156,8 @@ def content_detail():
                 "link": detail[5],
                 "username": detail[6],
                 "iconimgpath": detail[7],
-                "spotlightflag": spotlightflag
+                "spotlightflag": spotlightflag,
+                "textflag":detail[8]
             }
         }), 200
     except Exception as e:

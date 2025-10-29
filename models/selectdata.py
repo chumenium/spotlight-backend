@@ -133,7 +133,7 @@ def get_content_detail(contentID):
             # 詳細情報を取得
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
-                       c.playnum, c.link, u.username, u.iconimgpath
+                       c.playnum, c.link, u.username, u.iconimgpath, c.textflag
                 FROM content c
                 JOIN "user" u ON c.userID = u.userID
                 WHERE c.contentID = %s;
@@ -316,7 +316,6 @@ def get_playlists_with_thumbnail(userID):
         if conn:
             release_connection(conn)
 
-print(get_user_spotlightnum("testUser1"))
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")
