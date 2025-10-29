@@ -19,6 +19,9 @@ def get_username():
     try:
         uid = request.user["firebase_uid"]
         username, iconimgpath = get_user_name_iconpath(uid)
+        print(uid)
+        print(username)
+        print(iconimgpath)
         return jsonify({
             "status": "success",
             "data": {
