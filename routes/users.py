@@ -6,6 +6,10 @@ from datetime import datetime
 from utils.auth import jwt_required
 from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum
 from models.updatedata import enable_notification, disable_notification
+from models.createdata import (
+    add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
+    insert_search_history, insert_play_history, insert_notification
+)
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 
@@ -185,4 +189,19 @@ def get_prolile_data():
 
     except Exception as e:
         print("⚠️エラー(get_play_history_list):", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#検索履歴を登録
+@users_bp.route('/addserchword', methods=['POST'])
+@jwt_required
+def add_comment():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        serchword = data.get("word")
+        insert_search_history(userID=uid,serchword=serchword)
+        return jsonify({"status": "success", "message": "検索履歴を追加しました。"}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400

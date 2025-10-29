@@ -98,6 +98,34 @@ def get_user_spotlightnum(userID):
         if conn:
             release_connection(conn)
 
+#実装済み
+def get_play_content_id(contentID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            if contentID:
+                cur.execute(
+                    'SELECT MIN(contentid) FROM content WHERE contentid > %s',
+                    (contentID,)
+                )
+                row = cur.fetchone()
+            else:
+                cur.execute(
+                    'SELECT MIN(contentid) FROM content'
+                )
+                row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 #------------------------------ここから要テスト------------------------------
 
 def get_content_id():
@@ -307,6 +335,38 @@ def get_playlists_with_thumbnail(userID):
                 HAVING MIN(pd.contentID) IS NOT NULL
                 ORDER BY p.playlistID
             """, (userID,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+
+
+#実装済み
+# 検索一致コンテンツ一覧
+def get_search_contents(word):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    c.contentID, 
+                    c.title, 
+                    c.spotlightnum, 
+                    c.posttimestamp, 
+                    c.playnum, 
+                    c.link, 
+                    c.thumbnailpath
+                FROM contentuser cu
+                JOIN content c ON cu.contentID = c.contentID
+                WHERE c.title ILIKE %s
+            """, (f"%{word}%",))  # ← 部分一致検索（大文字小文字区別なし）
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:

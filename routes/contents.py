@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
 from models.updatedata import spotlight_on, spotlight_off
-from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content
+from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,get_search_contents
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
@@ -120,7 +120,6 @@ def add_comment():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         insert_comment(
-            contentID=data.get("contentID"),
             userID=uid,
             commenttext=data.get("commenttext")
         )
@@ -140,11 +139,15 @@ def content_detail():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         contentID = data.get("contentID")
-        detail = get_content_detail(contentID)
-        if not detail:
-            return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
+        nextcontentID = get_play_content_id(contentID)
+        if not nextcontentID:
+            return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
+        detail = get_content_detail(nextcontentID)
+        # if not detail:
+        #     return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
 
-        spotlightflag = get_user_spotlight_flag(uid,contentID)
+        spotlightflag = get_user_spotlight_flag(uid,nextcontentID)
+        insert_play_history(userID=uid,contentID=nextcontentID)
         return jsonify({
             "status": "success",
             "data": {
@@ -157,7 +160,8 @@ def content_detail():
                 "username": detail[6],
                 "iconimgpath": detail[7],
                 "spotlightflag": spotlightflag,
-                "textflag":detail[8]
+                "textflag":detail[8],
+                "nextcontentid": nextcontentID
             }
         }), 200
     except Exception as e:
@@ -247,3 +251,46 @@ def get_comments():
     except Exception as e:
         print("⚠️エラー(get_comments):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+#検索機能
+@content_bp.route('/serch', methods=['POST'])
+@jwt_required
+def add_comment():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        serchword = data.get("word")
+        #検索履歴を保存
+        insert_search_history(userID=uid,serchword=serchword)
+
+        # モデル関数から検索結果を取得
+        rows = get_search_contents(serchword)
+
+        # データが存在しない場合
+        if not rows:
+            return jsonify({"status": "success", "message": "該当するコンテンツがありません", "data": []}), 200
+
+        # Dartで扱いやすいように整形
+        result = []
+        for row in rows:
+            result.append({
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3],
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailurl": row[6]
+            })
+
+        return jsonify({
+            "status": "success",
+            "message": f"{len(result)}件のコンテンツが見つかりました。",
+            "data": result
+        }), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+        
