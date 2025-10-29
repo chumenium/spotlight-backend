@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history
+from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum
 from models.updatedata import enable_notification, disable_notification
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
@@ -165,6 +165,20 @@ def get_play_history_list():
         ]
 
         return jsonify({"status": "success", "data": contents}), 200
+
+    except Exception as e:
+        print("⚠️エラー(get_play_history_list):", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#プロフィールに遷移した場合の処理
+@users_bp.route('/profile', methods=['POST'])
+@jwt_required
+def get_prolile_data():
+    try:
+        uid = request.user["firebase_uid"]
+        spotlightnum = get_user_spotlightnum(uid)
+        return jsonify({"status": "success", "spotlightnum": spotlightnum}), 200
 
     except Exception as e:
         print("⚠️エラー(get_play_history_list):", e)
