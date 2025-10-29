@@ -2,7 +2,7 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify
+from flask import Flask, jsonify,send_from_directory
 from flask_cors import CORS
 import os
 
@@ -44,6 +44,36 @@ def create_app(config_name='default'):
     app = Flask(__name__)
     init_connection_pool()
     
+
+    
+    # === 静的ファイルのルート定義 ===
+    @app.route('/icon/<path:filename>')
+    def serve_icon(filename):
+        icon_dir = os.path.join(app.root_path, 'icon')
+        return send_from_directory(icon_dir, filename)
+
+    @app.route('/content/movie/<path:filename>')
+    def serve_movie(filename):
+        movie_dir = os.path.join(app.root_path, 'content', 'movie')
+        return send_from_directory(movie_dir, filename)
+
+    @app.route('/content/audio/<path:filename>')
+    def serve_audio(filename):
+        audio_dir = os.path.join(app.root_path, 'content', 'audio')
+        return send_from_directory(audio_dir, filename)
+
+    @app.route('/content/picture/<path:filename>')
+    def serve_picture(filename):
+        picture_dir = os.path.join(app.root_path, 'content', 'picture')
+        return send_from_directory(picture_dir, filename)
+
+    @app.route('/content/thumbnail/<path:filename>')
+    def serve_thumbnail(filename):
+        thumbnail_dir = os.path.join(app.root_path, 'content', 'thumbnail')
+        return send_from_directory(thumbnail_dir, filename)
+
+
+
     # 設定の読み込み
     app.config.from_object(config[config_name])
     
@@ -179,6 +209,7 @@ def create_app(config_name='default'):
 # アプリケーションインスタンスの作成
 app = create_app(os.getenv('FLASK_ENV', 'development'))
 
+
 if __name__ == '__main__':
     # 開発サーバーの起動
     print("=" * 60)
@@ -189,37 +220,37 @@ if __name__ == '__main__':
     print(f"Port: {app.config['PORT']}")
     print(f"Debug: {app.config['DEBUG']}")
     print("=" * 60)
-    print("\nAvailable endpoints:")
-    print("  - GET  /")
-    print("  - GET  /api/health")
-    print("  - POST /api/auth/register")
-    print("  - POST /api/auth/login")
-    print("  - POST /api/auth/google")
-    print("  - GET  /api/posts")
-    print("  - POST /api/posts")
-    print("  - GET  /api/posts/<post_id>")
-    print("  - POST /api/posts/<post_id>/spotlight")
-    print("  - GET  /api/posts/<post_id>/comments")
-    print("  - POST /api/posts/<post_id>/comments")
-    print("  - GET  /api/search")
-    print("  - GET  /api/users/<user_id>")
-    print("  - PUT  /api/users/<user_id>")
-    print("  - GET  /api/users/<user_id>/profile")
-    print("  - GET  /api/users/<user_id>/stats")
-    print("  - GET  /api/notifications")
-    print("  - GET  /api/notifications/count")
-    print("  - DELETE /api/notifications/<notification_id>")
-    print("  - DELETE /api/notifications/clear")
-    print("  - POST /api/playlists")
-    print("  - GET  /api/playlists/user/<user_id>")
-    print("  - GET  /api/playlists/<playlist_id>/contents")
-    print("  - POST /api/playlists/<playlist_id>/contents")
-    print("  - DELETE /api/playlists/<playlist_id>/contents/<content_id>")
-    print("  - DELETE /api/playlists/<playlist_id>")
-    print("  - GET  /api/playhistory")
-    print("  - POST /api/playhistory")
-    print("  - DELETE /api/playhistory/clear")
-    print("  - GET  /api/playhistory/stats")
+    # print("\nAvailable endpoints:")
+    # print("  - GET  /")
+    # print("  - GET  /api/health")
+    # print("  - POST /api/auth/register")
+    # print("  - POST /api/auth/login")
+    # print("  - POST /api/auth/google")
+    # print("  - GET  /api/posts")
+    # print("  - POST /api/posts")
+    # print("  - GET  /api/posts/<post_id>")
+    # print("  - POST /api/posts/<post_id>/spotlight")
+    # print("  - GET  /api/posts/<post_id>/comments")
+    # print("  - POST /api/posts/<post_id>/comments")
+    # print("  - GET  /api/search")
+    # print("  - GET  /api/users/<user_id>")
+    # print("  - PUT  /api/users/<user_id>")
+    # print("  - GET  /api/users/<user_id>/profile")
+    # print("  - GET  /api/users/<user_id>/stats")
+    # print("  - GET  /api/notifications")
+    # print("  - GET  /api/notifications/count")
+    # print("  - DELETE /api/notifications/<notification_id>")
+    # print("  - DELETE /api/notifications/clear")
+    # print("  - POST /api/playlists")
+    # print("  - GET  /api/playlists/user/<user_id>")
+    # print("  - GET  /api/playlists/<playlist_id>/contents")
+    # print("  - POST /api/playlists/<playlist_id>/contents")
+    # print("  - DELETE /api/playlists/<playlist_id>/contents/<content_id>")
+    # print("  - DELETE /api/playlists/<playlist_id>")
+    # print("  - GET  /api/playhistory")
+    # print("  - POST /api/playhistory")
+    # print("  - DELETE /api/playhistory/clear")
+    # print("  - GET  /api/playhistory/stats")
     print("=" * 60)
     print("\nPress CTRL+C to quit\n")
     
