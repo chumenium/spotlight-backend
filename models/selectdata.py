@@ -88,8 +88,8 @@ def get_user_spotlightnum(userID):
             cur.execute('SELECT SUM(spotlightnum) FROM content where userID = %s', (userID,))
             row = cur.fetchone()
         if row:
-            print(row)
-            return row
+            print(row[0])
+            return row[0]
         return None, None
     except psycopg2.Error as e:
         print("データベースエラー:", e)
