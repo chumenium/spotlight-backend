@@ -34,7 +34,7 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 def firebase_auth():
     data = request.get_json()
     id_token_str = data.get("id_token")
-    token = data.get("token")  # 通知用トークン
+    
 
     if not id_token_str:
         return jsonify({"error": "id_token is required"}), 400
@@ -47,6 +47,7 @@ def firebase_auth():
         #ユーザが存在するかを確認
         if not user_exists(firebase_uid):
             # DBに登録（ユーザ作成 or 更新）
+            token = data.get("token")  # 通知用トークン
             register_username(firebase_uid, token)
 
         # JWT発行
