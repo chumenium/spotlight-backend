@@ -79,8 +79,24 @@ def get_user_name_iconpath(userID):
         if conn:
             release_connection(conn)
 
-
-
+def get_user_spotlightnum(userID):
+    """ユーザごとのスポットライト数を取得"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT SUM(spotlightnum) FROM content where userID = %s', (userID,))
+            row = cur.fetchone()
+        if row:
+            print(cur)
+            return cur
+        return None, None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None, None
+    finally:
+        if conn:
+            release_connection(conn)
 
 #------------------------------ここから要テスト------------------------------
 
@@ -154,7 +170,7 @@ def get_user_spotlight_flag(userID, contentID):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 # 3️⃣ コメント情報を取得
 def get_comments_by_content(contentID):
     conn = None
@@ -300,7 +316,7 @@ def get_playlists_with_thumbnail(userID):
         if conn:
             release_connection(conn)
 
-
+print(get_user_spotlightnum("testUser1"))
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")

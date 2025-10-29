@@ -171,3 +171,20 @@ CREATE TABLE notification(
     FOREIGN KEY (contentuserCID, contentuserUID) REFERENCES contentuser(contentID, userID),
     FOREIGN KEY (comCTID, comCMID) REFERENCES comment(contentID, commentID)
 );
+
+ALTER TABLE content
+ALTER COLUMN spotlightnum SET DEFAULT 0;
+ALTER TABLE content
+ALTER COLUMN playnum SET DEFAULT 0;
+ALTER TABLE content
+ALTER COLUMN posttimestamp SET DEFAULT NOW();
+ALTER TABLE comment
+ALTER COLUMN commenttimestamp SET DEFAULT NOW();
+ALTER TABLE comment
+ALTER COLUMN parentcommentID SET DEFAULT NULL;
+ALTER TABLE contentuser
+ALTER COLUMN spotlightflag SET DEFAULT FALSE;
+ALTER TABLE contentuser
+ALTER COLUMN bookmarkflag SET DEFAULT FALSE;
+ALTER TABLE notification
+ALTER COLUMN notificationtimestamp SET DEFAULT NOW();
