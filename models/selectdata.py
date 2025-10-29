@@ -99,6 +99,7 @@ def get_content_id():
         if conn:
             release_connection(conn)
 
+#実装済み
 # 1️⃣ 指定されたコンテンツIDの情報を取得
 def get_content_detail(contentID):
     """指定コンテンツの詳細を取得し、再生数を+1"""
@@ -132,7 +133,7 @@ def get_content_detail(contentID):
             release_connection(conn)
 
 
-
+#実装済み
 # 2️⃣ 指定ユーザIDのコンテンツユーザからスポットライトフラグを取得
 def get_user_spotlight_flag(userID, contentID):
     conn = None
@@ -178,6 +179,7 @@ def get_comments_by_content(contentID):
             release_connection(conn)
 
 
+#実装済み
 # 4️⃣ 検索履歴一覧を取得
 def get_search_history(userID):
     conn = None
@@ -200,6 +202,7 @@ def get_search_history(userID):
             release_connection(conn)
 
 
+#実装済み
 # 5️⃣ 指定ユーザーが投稿したコンテンツ一覧
 def get_user_contents(userID):
     conn = None
@@ -222,7 +225,7 @@ def get_user_contents(userID):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 # 6️⃣ スポットライト済みコンテンツ一覧
 def get_spotlight_contents(userID):
     conn = None
@@ -246,7 +249,7 @@ def get_spotlight_contents(userID):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 # 7️⃣ 再生履歴コンテンツ一覧
 def get_play_history(userID):
     conn = None
@@ -297,28 +300,28 @@ def get_playlists_with_thumbnail(userID):
         if conn:
             release_connection(conn)
 
-#get_user_name_iconpath("xonEecR0o2OcyDU9JJQXGBT3pYg2")
-print("-----------------------------全てのコンテンツID------------------------------------")
-print(get_content_id())
-print("-----------------------------指定したコンテンツの詳細------------------------------------")
-print(get_content_detail(1))
-print("-----------------------------指定したコンテンツのコメント------------------------------------")
-print(get_comments_by_content(1))
-print("-----------------------------指定したユーザの検索履歴------------------------------------")
-print(get_search_history("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
-print("-----------------------------指定したユーザの検索履歴------------------------------------")
-print(get_search_history("testUser1"))
-print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
-print(get_user_contents("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
-print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
-print(get_user_contents("testUser1"))
-print("-----------------------------指定したユーザがスポットライトを当てたコンテンツ------------------------------------")
-print(get_spotlight_contents("testUser1"))
-print("-----------------------------指定したユーザの再生履歴------------------------------------")
-print(get_play_history("testUser1"))
-print("-----------------------------指定したユーザのプレイリスト------------------------------------")
-print(get_playlists_with_thumbnail("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
-print("-----------------------------指定したコンテンツのコメント[0]------------------------------------")
-print(get_comments_by_content(1)[0])
-print("-----------------------------指定したコンテンツのコメント[1]------------------------------------")
-print(get_comments_by_content(1)[1])
+
+# print("-----------------------------全てのコンテンツID------------------------------------")
+# print(get_content_id())
+# print("-----------------------------指定したコンテンツの詳細------------------------------------")
+# print(get_content_detail(1))
+# print("-----------------------------指定したコンテンツのコメント------------------------------------")
+# print(get_comments_by_content(1))
+# print("-----------------------------指定したユーザの検索履歴------------------------------------")
+# print(get_search_history("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
+# print("-----------------------------指定したユーザの検索履歴------------------------------------")
+# print(get_search_history("testUser1"))
+# print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
+# print(get_user_contents("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
+# print("-----------------------------指定したユーザの投稿コンテンツ------------------------------------")
+# print(get_user_contents("testUser1"))
+# print("-----------------------------指定したユーザがスポットライトを当てたコンテンツ------------------------------------")
+# print(get_spotlight_contents("testUser1"))
+# print("-----------------------------指定したユーザの再生履歴------------------------------------")
+# print(get_play_history("testUser1"))
+# print("-----------------------------指定したユーザのプレイリスト------------------------------------")
+# print(get_playlists_with_thumbnail("xonEecR0o2OcyDU9JJQXGBT3pYg2"))
+# print("-----------------------------指定したコンテンツのコメント[0]------------------------------------")
+# print(get_comments_by_content(1)[0])
+# print("-----------------------------指定したコンテンツのコメント[1]------------------------------------")
+# print(get_comments_by_content(1)[1])

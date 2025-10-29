@@ -1,6 +1,7 @@
 import psycopg2
 from models.connection_pool import get_connection, release_connection
 
+#実装済み
 def spotlight_on(contentID, userID):
     """スポットライトON：カウント+1 & ユーザフラグTrue"""
     conn = None
@@ -28,7 +29,7 @@ def spotlight_on(contentID, userID):
             release_connection(conn)
 
 
-
+#実装済み
 def spotlight_off(contentID, userID):
     """スポットライトOFF：カウント-1 & ユーザフラグFalse"""
     conn = None
@@ -55,7 +56,7 @@ def spotlight_off(contentID, userID):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 def enable_notification(userID):
     """通知ON"""
     conn = None
@@ -76,7 +77,7 @@ def enable_notification(userID):
             release_connection(conn)
 
 
-
+#実装済み
 def disable_notification(userID):
     """通知OFF"""
     conn = None

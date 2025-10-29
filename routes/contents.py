@@ -3,10 +3,8 @@
 """
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
-from models.updatedata import (
-    spotlight_on, spotlight_off,
-    get_content_detail
-)
+from models.updatedata import spotlight_on, spotlight_off,get_content_detail,get_user_spotlight_flag,get_comments_by_content
+
 from models.createdata import (
     insert_content, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
@@ -15,10 +13,8 @@ from models.createdata import (
 import base64
 import os
 from datetime import datetime
-from moviepy.editor import VideoFileClip
-from PIL import Image
-from io import BytesIO
 from flask import current_app
+
 
 content_bp = Blueprint('content', __name__, url_prefix='/api/content')
 
@@ -26,85 +22,63 @@ content_bp = Blueprint('content', __name__, url_prefix='/api/content')
 # ===============================
 # 1️⃣ コンテンツ追加（動画・画像・音声に対応）
 # ===============================
-@content_bp.route('/add', methods=['POST'])
+@content_bp.route("/add", methods=["POST"])
 @jwt_required
 def add_content():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
 
-        content_type = data.get("type")   # "video" | "image" | "audio"
+        # --- 受信データ ---
+        content_type = data.get("type")      # "video" | "image" | "audio"
         title = data.get("title")
         link = data.get("link")
-        file_data = data.get("file")  # base64文字列を想定
+        file_data = data.get("file")         # base64文字列（コンテンツ本体）
+        thumb_data = data.get("thumbnail")   # base64文字列（サムネイル）
 
-        if not all([content_type, title, file_data]):
-            return jsonify({"status": "error", "message": "必要なデータが不足しています"}), 400
+        if not all([content_type, title, file_data, thumb_data]):
+            return jsonify({
+                "status": "error",
+                "message": "必要なデータが不足しています"
+            }), 400
 
-        # ベースディレクトリ
+        # --- パス設定 ---
         base_dir = os.path.join(current_app.root_path, "content")
-
-        # サブディレクトリ設定
-        paths = {
-            "video": os.path.join(base_dir, "movie"),
-            "image": os.path.join(base_dir, "picture"),
-            "audio": os.path.join(base_dir, "audio"),
-            "thumbnail": os.path.join(base_dir, "thumbnail")
+        subdirs = {
+            "video": "movie",
+            "image": "picture",
+            "audio": "audio",
+            "thumbnail": "thumbnail"
         }
-        for path in paths.values():
-            os.makedirs(path, exist_ok=True)
+        for sub in subdirs.values():
+            os.makedirs(os.path.join(base_dir, sub), exist_ok=True)
 
-        # ファイル名共通部分
+        # --- ファイル名作成 ---
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         filename_base = f"{uid}_{timestamp}"
 
-        # === 種類別処理 ===
-        if content_type == "video":
-            if not VideoFileClip or not Image:
-                return jsonify({"status": "error", "message": "moviepyまたはPillowがインストールされていません"}), 500
+        # --- ファイル拡張子設定 ---
+        ext_map = {"video": "mp4", "image": "jpg", "audio": "mp3"}
+        ext = ext_map.get(content_type, "dat")
 
-            video_path = os.path.join(paths["video"], f"{filename_base}.mp4")
-            with open(video_path, "wb") as f:
-                f.write(base64.b64decode(file_data))
+        # --- ファイル保存 ---
+        content_rel_path = f"content/{subdirs[content_type]}/{filename_base}.{ext}"
+        thumb_rel_path = f"content/thumbnail/{filename_base}_thumb.jpg"
 
-            # サムネイル作成（1秒目のフレーム）
-            clip = VideoFileClip(video_path)
-            frame = clip.get_frame(1.0)
-            thumb_path = os.path.join(paths["thumbnail"], f"{filename_base}_thumb.jpg")
-            Image.fromarray(frame).save(thumb_path)
-            clip.close()
+        content_abs_path = os.path.join(current_app.root_path, content_rel_path)
+        thumb_abs_path = os.path.join(current_app.root_path, thumb_rel_path)
 
-            contentpath = f"content/movie/{filename_base}.mp4"
-            thumbnailpath = f"content/thumbnail/{filename_base}_thumb.jpg"
+        # Base64 → バイナリ書き込み
+        with open(content_abs_path, "wb") as f:
+            f.write(base64.b64decode(file_data))
 
-        elif content_type == "image":
-            if not Image:
-                return jsonify({"status": "error", "message": "Pillowがインストールされていません"}), 500
-
-            img_path = os.path.join(paths["picture"], f"{filename_base}.jpg")
-            with open(img_path, "wb") as f:
-                f.write(base64.b64decode(file_data))
-            # サムネイルとして同じ画像を使用
-            thumb_path = os.path.join(paths["thumbnail"], f"{filename_base}_thumb.jpg")
-            Image.open(img_path).save(thumb_path)
-
-            contentpath = f"content/picture/{filename_base}.jpg"
-            thumbnailpath = f"content/thumbnail/{filename_base}_thumb.jpg"
-
-        elif content_type == "audio":
-            audio_path = os.path.join(paths["audio"], f"{filename_base}.mp3")
-            with open(audio_path, "wb") as f:
-                f.write(base64.b64decode(file_data))
-            thumbnailpath = "content/thumbnail/audio_default.png"
-            contentpath = f"content/audio/{filename_base}.mp3"
-
-        else:
-            return jsonify({"status": "error", "message": "無効なtypeです（video/image/audio）"}), 400
+        with open(thumb_abs_path, "wb") as f:
+            f.write(base64.b64decode(thumb_data))
 
         # --- DB登録 ---
         content_id = insert_content(
-            contentpath=contentpath,
-            thumbnailpath=thumbnailpath,
+            contentpath=content_rel_path,
+            thumbnailpath=thumb_rel_path,
             link=link,
             title=title,
             userID=uid
@@ -115,14 +89,13 @@ def add_content():
             "message": "コンテンツを追加しました。",
             "data": {
                 "contentID": content_id,
-                "contentpath": contentpath,
-                "thumbnailpath": thumbnailpath
+                "contentpath": content_rel_path,
+                "thumbnailpath": thumb_rel_path
             }
         }), 200
 
     except Exception as e:
         print("⚠️エラー:", e)
-        print(traceback.format_exc())
         return jsonify({"status": "error", "message": str(e)}), 400
 
 # ===============================
@@ -133,11 +106,11 @@ def add_content():
 def add_comment():
     try:
         uid = request.user["firebase_uid"]
-        data = request.json
+        data = request.get_json()
         insert_comment(
-            contentID=data["contentID"],
+            contentID=data.get("contentID"),
             userID=uid,
-            commenttext=data["commenttext"]
+            commenttext=data.get("commenttext")
         )
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
@@ -152,11 +125,14 @@ def add_comment():
 @jwt_required
 def content_detail():
     try:
-        contentID = request.json["contentID"]
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        contentID = data.get("contentID")
         detail = get_content_detail(contentID)
         if not detail:
             return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
 
+        spotlightflag = get_user_spotlight_flag(uid,contentID)
         return jsonify({
             "status": "success",
             "data": {
@@ -167,7 +143,8 @@ def content_detail():
                 "playnum": detail[4],
                 "link": detail[5],
                 "username": detail[6],
-                "iconimgpath": detail[7]
+                "iconimgpath": detail[7],
+                "spotlightflag": spotlightflag
             }
         }), 200
     except Exception as e:
@@ -183,7 +160,8 @@ def content_detail():
 def spotlight_on_route():
     try:
         uid = request.user["firebase_uid"]
-        contentID = request.json["contentID"]
+        data = request.get_json()
+        contentID = data.get("contentID")
         spotlight_on(contentID, uid)
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
@@ -199,9 +177,60 @@ def spotlight_on_route():
 def spotlight_off_route():
     try:
         uid = request.user["firebase_uid"]
-        contentID = request.json["contentID"]
+        data = request.get_json()
+        contentID = data.get("contentID")
         spotlight_off(contentID, uid)
         return jsonify({"status": "success", "message": "スポットライトをOFFにしました"}), 200
     except Exception as e:
         print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+# ===============================
+# 5️⃣ コンテンツのコメント一覧を取得
+# ===============================
+@content_bp.route('/getcomments', methods=['POST'])
+@jwt_required
+def get_comments():
+    try:
+        data = request.get_json()
+        content_id = data.get("contentID")
+
+        if not content_id:
+            return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
+
+        rows = get_comments_by_content(content_id)
+
+        # コメントを辞書リストに変換
+        comments = [
+            {
+                "commentID": row[0],
+                "username": row[1],
+                "iconimgpath": row[2],
+                "commenttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
+                "commenttext": row[4],
+                "parentcommentID": row[5],
+                "replies": []  # 返信格納用
+            }
+            for row in rows
+        ]
+
+        # === スレッド構造に整形 ===
+        comment_dict = {c["commentID"]: c for c in comments}
+        root_comments = []
+
+        for c in comments:
+            parent_id = c["parentcommentID"]
+            if parent_id and parent_id in comment_dict:
+                comment_dict[parent_id]["replies"].append(c)
+            else:
+                root_comments.append(c)
+
+        return jsonify({
+            "status": "success",
+            "data": root_comments  # 親コメントをルートにしたツリー構造
+        }), 200
+
+    except Exception as e:
+        print("⚠️エラー(get_comments):", e)
         return jsonify({"status": "error", "message": str(e)}), 400

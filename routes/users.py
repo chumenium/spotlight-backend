@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdata import get_user_name_iconpath,get_search_history
+from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history
 from models.updatedata import enable_notification, disable_notification
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
@@ -76,4 +76,96 @@ def disable_user_notification():
         return jsonify({"status": "success", "message": "通知をOFFにしました"}), 200
     except Exception as e:
         print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+# ===============================
+# 2️⃣ 指定ユーザーが投稿したコンテンツ一覧を取得
+# ===============================
+@users_bp.route('/getusercontents', methods=['POST'])
+@jwt_required
+def get_user_contents_list():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_user_contents(uid)
+
+        # Dartで扱いやすいようにdictに変換
+        contents = [
+            {
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailpath": row[6],
+            }
+            for row in rows
+        ]
+
+        return jsonify({"status": "success", "data": contents}), 200
+
+    except Exception as e:
+        print("⚠️エラー(get_user_contents_list):", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+# ===============================
+# 3️⃣ スポットライト済みコンテンツ一覧を取得
+# ===============================
+@users_bp.route('/getspotlightcontents', methods=['POST'])
+@jwt_required
+def get_spotlight_contents_list():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_spotlight_contents(uid)
+
+        contents = [
+            {
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailpath": row[6],
+            }
+            for row in rows
+        ]
+
+        return jsonify({"status": "success", "data": contents}), 200
+
+    except Exception as e:
+        print("⚠️エラー(get_spotlight_contents_list):", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+# ===============================
+# 4️⃣ 再生履歴コンテンツ一覧を取得
+# ===============================
+@users_bp.route('/getplayhistory', methods=['POST'])
+@jwt_required
+def get_play_history_list():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_play_history(uid)
+
+        contents = [
+            {
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailpath": row[6],
+            }
+            for row in rows
+        ]
+
+        return jsonify({"status": "success", "data": contents}), 200
+
+    except Exception as e:
+        print("⚠️エラー(get_play_history_list):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
