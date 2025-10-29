@@ -57,24 +57,14 @@ def create_app(config_name='default'):
     })
     
     from routes.auth import auth_bp
-    from routes.posts import posts_bp
-    from routes.comments import comments_bp
     from routes.contents import contents_bp
     from routes.search import search_bp
     from routes.users import users_bp
-    from routes.notifications import notifications_bp
-    from routes.playlists import playlists_bp
-    from routes.playhistory import playhistory_bp
     # Blueprintの登録
     app.register_blueprint(auth_bp)
-    app.register_blueprint(posts_bp)
-    app.register_blueprint(comments_bp)
     app.register_blueprint(contents_bp)
     app.register_blueprint(search_bp)
     app.register_blueprint(users_bp)
-    app.register_blueprint(notifications_bp)
-    app.register_blueprint(playlists_bp)
-    app.register_blueprint(playhistory_bp)
     
     from flask import Blueprint, request, jsonify
     from models.selectdata import get_user_name_iconpath
