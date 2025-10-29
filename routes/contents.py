@@ -22,6 +22,7 @@ content_bp = Blueprint('content', __name__, url_prefix='/api/content')
 # ===============================
 # 1️⃣ コンテンツ追加（動画・画像・音声に対応）
 # ===============================
+#フロント側ではテキスト投稿以外はfile,thumbnailを指定する。テキスト投稿の場合はtextにデータを含める
 @content_bp.route("/add", methods=["POST"])
 @jwt_required
 def add_content():
@@ -113,16 +114,25 @@ def add_content():
 # ===============================
 # 2️⃣ コメント追加
 # ===============================
+#フロント側ではコメントに対する返信ではない場合parentcommentidはbodyに含めない
 @content_bp.route('/addcomment', methods=['POST'])
 @jwt_required
 def add_comment():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
-        insert_comment(
-            userID=uid,
-            commenttext=data.get("commenttext")
-        )
+        parentcommentid = data.get("parentcommentID")
+        if parentcommentid:
+            insert_comment(
+                userID=uid,
+                commenttext=data.get("commenttext")
+            )
+        else:
+            insert_comment(
+                userID=uid,
+                commenttext=data.get("commenttext"),
+                parentcommentID=parentcommentid
+            )
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
         print("⚠️エラー:", e)
