@@ -3,10 +3,10 @@
 """
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
-from models.updatedata import spotlight_on, spotlight_off,get_content_detail,get_user_spotlight_flag,get_comments_by_content
-
+from models.updatedata import spotlight_on, spotlight_off
+from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content
 from models.createdata import (
-    insert_content, insert_comment, insert_playlist, insert_playlist_detail,
+    add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
 )
 
@@ -76,7 +76,7 @@ def add_content():
             f.write(base64.b64decode(thumb_data))
 
         # --- DB登録 ---
-        content_id = insert_content(
+        content_id = add_content_and_link_to_users(
             contentpath=content_rel_path,
             thumbnailpath=thumb_rel_path,
             link=link,
