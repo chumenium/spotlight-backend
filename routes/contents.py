@@ -257,7 +257,7 @@ def get_comments():
 #検索機能
 @content_bp.route('/serch', methods=['POST'])
 @jwt_required
-def add_comment():
+def serch():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
