@@ -207,6 +207,8 @@ def change_icon():
         print(type(file))
         print(file)
         if file:
+            if file.startswith("data:image"):
+                file = file.split(",")[1]
             # ===== Base64文字列のヘッダーを除去 =====
             # match = re.match(r"^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$", file)
             # if not match:
@@ -224,7 +226,9 @@ def change_icon():
 
             filename = f"{username}_icon.png"
             save_path = os.path.join(save_dir, filename)
-
+            print(save_path)
+            print("--------------------------------------------------------------------------")
+            print(file)
             # ===== 画像を保存 =====
             # Base64 → バイナリ書き込み
             with open(save_path, "wb") as f:

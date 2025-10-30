@@ -58,7 +58,7 @@ def insert_comment(userID, commenttext, parentcommentID=None):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 #----------------プレイリストを追加----------------
 def insert_playlist(userID, title):
     """プレイリストを追加"""
@@ -81,7 +81,7 @@ def insert_playlist(userID, title):
         if conn:
             release_connection(conn)
 
-
+#実装済み
 #----------------プレイリスト詳細を追加----------------
 def insert_playlist_detail(userID, playlistID, contentID):
     """プレイリスト詳細を追加"""

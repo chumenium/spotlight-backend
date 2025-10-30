@@ -188,3 +188,6 @@ ALTER TABLE contentuser
 ALTER COLUMN bookmarkflag SET DEFAULT FALSE;
 ALTER TABLE notification
 ALTER COLUMN notificationtimestamp SET DEFAULT NOW();
+ALTER TABLE content
+ALTER COLUMN contentpath TYPE TEXT;
+ALTER TABLE content ADD COLUMN textflag BOOLEAN DEFAULT FALSE;
