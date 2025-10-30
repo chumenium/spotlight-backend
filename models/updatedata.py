@@ -98,7 +98,7 @@ def disable_notification(userID):
             release_connection(conn)
 
 
-
+#実装済み
 #----------------アイコンを変更----------------
 def chenge_icon(userID, iconimgpath):
     """通知履歴を追加"""
@@ -107,7 +107,7 @@ def chenge_icon(userID, iconimgpath):
         cur = conn.cursor()
         with conn.cursor() as cur:
             cur.execute("""
-                INSERT INTO "user" SET iconimgpath = %s WHERE userID = %s;
+                UPDATE "user" SET iconimgpath = %s WHERE userID = %s;
             """, (iconimgpath, userID))
         conn.commit()
         print(f"✅ アイコンを変更しました。")
