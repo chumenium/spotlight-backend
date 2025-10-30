@@ -204,6 +204,7 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
+        print(type(file))
         print(file)
         if file:
             # ===== Base64文字列のヘッダーを除去 =====
@@ -225,7 +226,7 @@ def change_icon():
             save_path = os.path.join(save_dir, filename)
 
             # ===== 画像を保存 =====
-# Base64 → バイナリ書き込み
+            # Base64 → バイナリ書き込み
             with open(save_path, "wb") as f:
                 f.write(base64.b64decode(file))
         else:
