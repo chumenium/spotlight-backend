@@ -96,3 +96,23 @@ def disable_notification(userID):
     finally:
         if conn:
             release_connection(conn)
+
+
+
+#----------------アイコンを変更----------------
+def chenge_icon(userID, iconimgpath):
+    """通知履歴を追加"""
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO "user" SET iconimgpath = %s WHERE userID = %s;
+            """, (iconimgpath, userID))
+        conn.commit()
+        print(f"✅ アイコンを変更しました。")
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)

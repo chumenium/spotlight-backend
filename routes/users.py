@@ -1,15 +1,18 @@
 """
 ユーザー管理API
 """
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
 from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum
-from models.updatedata import enable_notification, disable_notification
+from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
 )
+import os
+import re
+import base64
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 
@@ -192,16 +195,54 @@ def get_prolile_data():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
-#検索履歴を登録
-@users_bp.route('/addserchword', methods=['POST'])
+#アイコン変更の処理
+@users_bp.route('/changeicon', methods=['POST'])
 @jwt_required
-def add_comment():
+def change_icon():
     try:
         uid = request.user["firebase_uid"]
-        data = request.get_json()
-        serchword = data.get("word")
-        insert_search_history(userID=uid,serchword=serchword)
-        return jsonify({"status": "success", "message": "検索履歴を追加しました。"}), 200
+        username = request.form.get("username")
+        file = request.files.get("iconimg")
+
+        if file:
+            # ===== Base64文字列のヘッダーを除去 =====
+            match = re.match(r"^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$", file)
+            if not match:
+                return jsonify({
+                    "status": "error",
+                    "message": "不正な画像データです。"
+                }), 400
+
+            ext = match.group(1)
+            img_data = base64.b64decode(match.group(2))
+
+            # ===== 保存パス設定 =====
+            save_dir = os.path.join(current_app.root_path, "icon")
+            os.makedirs(save_dir, exist_ok=True)
+
+            filename = f"{username}_icon.{ext}"
+            save_path = os.path.join(save_dir, filename)
+
+            # ===== 画像を保存 =====
+            with open(save_path, "wb") as f:
+                f.write(img_data)
+        else:
+            filename = "default_icon.jpg"
+            iconimgpath = f"icon/{filename}"
+
+        # ===== DBにパスを保存（相対パスで） =====
+        iconimgpath = f"icon/{filename}"
+        chenge_icon(uid, iconimgpath)
+
+        return jsonify({
+            "status": "success",
+            "message": "アイコンを変更しました。",
+            "iconimgpath": iconimgpath
+        }), 200
+
     except Exception as e:
-        print("⚠️エラー:", e)
-        return jsonify({"status": "error", "message": str(e)}), 400
+        print("⚠️エラー(change_icon):", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
