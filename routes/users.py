@@ -228,7 +228,7 @@ def change_icon():
                 f.write(img_data)
         else:
             filename = "default_icon.jpg"
-            iconimgpath = f"icon/{filename}"
+            iconimgpath = f"/icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====
         iconimgpath = f"icon/{filename}"
