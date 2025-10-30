@@ -226,12 +226,13 @@ def change_icon():
             # ===== 画像を保存 =====
             with open(save_path, "wb") as f:
                 f.write(img_data)
+            iconimgpath = f"/icon/{filename}"
         else:
             filename = "default_icon.jpg"
             iconimgpath = f"/icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====
-        iconimgpath = f"icon/{filename}"
+        
         chenge_icon(uid, iconimgpath)
 
         return jsonify({
