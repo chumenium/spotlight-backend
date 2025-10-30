@@ -318,6 +318,31 @@ def get_play_history(userID):
             release_connection(conn)
 
 
+#実装済み
+# 📘 特定プレイリスト内のコンテンツ一覧取得
+def get_playlist_contents(userID, playlistID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.contentID, c.title, c.spotlightnum, c.posttimestamp,
+                       c.playnum, c.link, c.thumbnailpath
+                FROM playlistdetail pd
+                JOIN content c ON pd.contentID = c.contentID
+                WHERE pd.userID = %s AND pd.playlistID = %s
+                ORDER BY pd.addedtimestamp DESC
+            """, (userID, playlistID))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー(get_playlist_contents):", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 # 8️⃣ プレイリストタイトル＋先頭サムネイル＋コンテンツ数
 def get_playlists_with_thumbnail(userID):
     conn = None
