@@ -203,7 +203,7 @@ def change_icon():
         uid = request.user["firebase_uid"]
         username = request.form.get("username")
         file = request.files.get("iconimg")
-
+        print(file)
         if file:
             # ===== Base64文字列のヘッダーを除去 =====
             match = re.match(r"^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$", file)
