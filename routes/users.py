@@ -201,8 +201,9 @@ def get_prolile_data():
 def change_icon():
     try:
         uid = request.user["firebase_uid"]
-        username = request.form.get("username")
-        file = request.get("iconimg")
+        data = request.get_json()
+        username = data.get("username")
+        file = data.get("iconimg")
         print(file)
         if file:
             # ===== Base64文字列のヘッダーを除去 =====
