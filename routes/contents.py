@@ -18,6 +18,10 @@ from flask import current_app
 
 content_bp = Blueprint('content', __name__, url_prefix='/api/content')
 
+def clean_base64(b64_string):
+    if "," in b64_string:
+        b64_string = b64_string.split(",")[1]
+    return b64_string
 
 # ===============================
 # 1️⃣ コンテンツ追加（動画・画像・音声に対応）
@@ -39,6 +43,8 @@ def add_content():
 
             file_data = data.get("file")         # base64文字列（コンテンツ本体）
             thumb_data = data.get("thumbnail")   # base64文字列（サムネイル）
+            file_data = clean_base64(file_data)
+            thumb_data = clean_base64(thumb_data)
             if not all([content_type, title, file_data, thumb_data]):
                 return jsonify({
                     "status": "error",
