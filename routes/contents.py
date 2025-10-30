@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
 from models.updatedata import spotlight_on, spotlight_off
-from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,get_search_contents
+from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,get_search_contents, get_playlists_with_thumbnail, get_playlist_contents
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
@@ -263,6 +263,78 @@ def get_comments():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+
+#プレイリスト作成
+@content_bp.route('/createplaylist', methods=['POST'])
+@jwt_required
+def create_playlist():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        title = data.get("title")
+        insert_playlist(uid, title)
+        return jsonify({"status": "success", "message": "プレイリストを作成しました"}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+#プレイリストにコンテンツ追加
+@content_bp.route('/addcontentplaylist', methods=['POST'])
+@jwt_required
+def add_content_in_playlist():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        playlistid = data.get("playlistid")
+        contentid = data.get("playlistid")
+        insert_playlist_detail(uid, playlistid, contentid)
+        return jsonify({"status": "success", "message": "プレイリストにコンテンツを追加しました"}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+
+#プレイリスト一覧を取得
+@content_bp.route('/getplaylist', methods=['POST'])
+@jwt_required
+def get_playlist():
+    try:
+        uid = request.user["firebase_uid"]
+        result = get_playlists_with_thumbnail(uid)
+        return jsonify({"status": "success", "playlist": result}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#プレイリストのコンテンツ一覧を取得
+@content_bp.route('/getplaylistdetail', methods=['POST'])
+@jwt_required
+def get_playlistdetail():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        playlistid = data.get("playlistid")
+        rows = get_playlist_contents(uid,playlistid)
+
+        contents = [
+            {
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailpath": row[6],
+            }
+            for row in rows
+        ]
+
+        return jsonify({"status": "success", "data": contents}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 #検索機能
 @content_bp.route('/serch', methods=['POST'])

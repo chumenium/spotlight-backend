@@ -318,27 +318,45 @@ def get_play_history(userID):
             release_connection(conn)
 
 
-# 8️⃣ プレイリストタイトル＋先頭サムネイル
+# 8️⃣ プレイリストタイトル＋先頭サムネイル＋コンテンツ数
 def get_playlists_with_thumbnail(userID):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT p.title, c.thumbnailpath
+                SELECT 
+                    p.playlistID,
+                    p.title,
+                    c.thumbnailpath,
+                    COUNT(pd.contentID) AS content_count
                 FROM playlist p
                 LEFT JOIN playlistdetail pd 
                     ON p.userID = pd.userID AND p.playlistID = pd.playlistID
-                LEFT JOIN content c ON pd.contentID = c.contentID
+                LEFT JOIN content c 
+                    ON pd.contentID = c.contentID
                 WHERE p.userID = %s
-                GROUP BY p.title, c.thumbnailpath, p.playlistID
-                HAVING MIN(pd.contentID) IS NOT NULL
+                GROUP BY p.playlistID, p.title, c.thumbnailpath
                 ORDER BY p.playlistID
             """, (userID,))
+            
             rows = cur.fetchall()
-        return rows
+
+        # Dart側で扱いやすいように辞書形式へ変換
+        result = [
+            {
+                "playlistID": row[0],
+                "title": row[1],
+                "thumbnailpath": row[2],
+                "content_count": row[3]
+            }
+            for row in rows
+        ]
+
+        return result
+
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        print("データベースエラー(get_playlists_with_thumbnail):", e)
         return []
     finally:
         if conn:

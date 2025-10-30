@@ -2,6 +2,7 @@ import psycopg2
 from models.connection_pool import get_connection, release_connection
 
 
+#実装済み
 #----------------コンテンツを追加----------------
 def add_content_and_link_to_users(contentpath, link, title, userID, thumbnailpath=None, textflag=None):
     """コンテンツを追加し、全ユーザと紐付け"""
@@ -34,6 +35,7 @@ def add_content_and_link_to_users(contentpath, link, title, userID, thumbnailpat
         release_connection(conn)
 
 
+#実装済み
 #----------------コメントを追加----------------
 def insert_comment(userID, commenttext, parentcommentID=None):
     """コメントを追加"""
