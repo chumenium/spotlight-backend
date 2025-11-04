@@ -2,9 +2,10 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify,send_from_directory
+from flask import Flask, jsonify, send_from_directory, make_response, send_file
 from flask_cors import CORS
 import os
+import mimetypes
 
 # 設定のインポート
 from config import config
@@ -50,7 +51,18 @@ def create_app(config_name='default'):
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
         icon_dir = os.path.join(app.root_path, 'icon')
-        return send_from_directory(icon_dir, filename)
+        file_path = os.path.join(icon_dir, filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        # MIMEタイプを自動判定
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if mimetype is None:
+            mimetype = 'image/jpeg'  # デフォルトはJPEG
+        
+        # send_fileを使用してファイルを送信（CORSヘッダーが自動的に追加される）
+        return send_file(file_path, mimetype=mimetype)
 
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
@@ -78,23 +90,51 @@ def create_app(config_name='default'):
     app.config.from_object(config[config_name])
     
     # CORSの設定
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": app.config['CORS_ORIGINS'],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"]
-        },
-        r"/icon/*": {
-            "origins": app.config['CORS_ORIGINS'],
-            "methods": ["GET", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
-        },
-        r"/content/*": {
-            "origins": app.config['CORS_ORIGINS'],
-            "methods": ["GET", "OPTIONS"],
-            "allow_headers": ["Content-Type"]
+    # 開発環境ではすべてのオリジンを許可
+    cors_origins = app.config['CORS_ORIGINS']
+    if cors_origins == ['*']:
+        # すべてのオリジンを許可する場合
+        cors_resources = {
+            r"/api/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": False
+            },
+            r"/icon/*": {
+                "origins": "*",
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"],
+                "supports_credentials": False
+            },
+            r"/content/*": {
+                "origins": "*",
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"],
+                "supports_credentials": False
+            }
         }
-    })
+    else:
+        # 特定のオリジンのみ許可
+        cors_resources = {
+            r"/api/*": {
+                "origins": cors_origins,
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"]
+            },
+            r"/icon/*": {
+                "origins": cors_origins,
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"]
+            },
+            r"/content/*": {
+                "origins": cors_origins,
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"]
+            }
+        }
+    
+    CORS(app, resources=cors_resources)
     
     from routes.auth import auth_bp
     from routes.contents import content_bp
