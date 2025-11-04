@@ -2,10 +2,9 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify, send_from_directory, make_response, send_file
+from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
 import os
-import mimetypes
 
 # 設定のインポート
 from config import config
@@ -51,32 +50,8 @@ def create_app(config_name='default'):
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
         icon_dir = os.path.join(app.root_path, 'icon')
-        file_path = os.path.join(icon_dir, filename)
-        
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
-        
-        # MIMEタイプを自動判定
-        mimetype, _ = mimetypes.guess_type(file_path)
-        if mimetype is None:
-            mimetype = 'image/jpeg'  # デフォルトはJPEG
-        
-        # ファイルをバイナリモードで読み込んでから送信
-        # これにより接続が途中で閉じられる問題を回避
-        try:
-            with open(file_path, 'rb') as f:
-                file_data = f.read()
-            
-            response = make_response(file_data)
-            response.headers['Content-Type'] = mimetype
-            response.headers['Content-Length'] = str(len(file_data))
-            response.headers['Cache-Control'] = 'public, max-age=3600'
-            response.headers['Accept-Ranges'] = 'bytes'
-            
-            return response
-        except Exception as e:
-            print(f"⚠️ アイコン送信エラー: {e}")
-            return jsonify({"error": "Failed to read file"}), 500
+        # send_from_directoryを使用（他のファイルで動作確認済み）
+        return send_from_directory(icon_dir, filename)
 
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
