@@ -72,6 +72,10 @@ def create_app(config_name='default'):
         thumbnail_dir = os.path.join(app.root_path, 'content', 'thumbnail')
         return send_from_directory(thumbnail_dir, filename)
 
+    @app.route('/icon/<path:filename>')
+    def serve_icon(filename):
+        icon_dir = os.path.join(app.root_path, 'icon')
+        return send_from_directory(icon_dir, filename)
 
 
     # 設定の読み込み
