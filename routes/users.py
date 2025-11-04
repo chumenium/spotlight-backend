@@ -230,7 +230,7 @@ def change_icon():
                 f.write(base64.b64decode(file))
         else:
             filename = "default_icon.jpg"
-        iconimgpath = f"icon/{filename}"
+        iconimgpath = f"/icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====
         
