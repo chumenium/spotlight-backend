@@ -61,8 +61,22 @@ def create_app(config_name='default'):
         if mimetype is None:
             mimetype = 'image/jpeg'  # デフォルトはJPEG
         
-        # send_fileを使用してファイルを送信（CORSヘッダーが自動的に追加される）
-        return send_file(file_path, mimetype=mimetype)
+        # ファイルをバイナリモードで読み込んでから送信
+        # これにより接続が途中で閉じられる問題を回避
+        try:
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+            
+            response = make_response(file_data)
+            response.headers['Content-Type'] = mimetype
+            response.headers['Content-Length'] = str(len(file_data))
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            response.headers['Accept-Ranges'] = 'bytes'
+            
+            return response
+        except Exception as e:
+            print(f"⚠️ アイコン送信エラー: {e}")
+            return jsonify({"error": "Failed to read file"}), 500
 
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
@@ -90,10 +104,33 @@ def create_app(config_name='default'):
     app.config.from_object(config[config_name])
     
     # CORSの設定
-    # 開発環境ではすべてのオリジンを許可
+    # 開発環境ではすべてのオリジンを許可（本番環境では制限すること）
     cors_origins = app.config['CORS_ORIGINS']
-    if cors_origins == ['*']:
-        # すべてのオリジンを許可する場合
+    
+    # 開発環境（DEBUG=True）の場合はすべてのオリジンを許可
+    if app.config.get('DEBUG', False):
+        cors_resources = {
+            r"/api/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                "allow_headers": ["Content-Type", "Authorization"],
+                "supports_credentials": False
+            },
+            r"/icon/*": {
+                "origins": "*",
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"],
+                "supports_credentials": False
+            },
+            r"/content/*": {
+                "origins": "*",
+                "methods": ["GET", "OPTIONS"],
+                "allow_headers": ["Content-Type"],
+                "supports_credentials": False
+            }
+        }
+    elif cors_origins == ['*']:
+        # すべてのオリジンを許可する場合（明示的に指定された場合）
         cors_resources = {
             r"/api/*": {
                 "origins": "*",
