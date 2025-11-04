@@ -71,8 +71,8 @@ def add_content():
             ext = ext_map.get(content_type, "dat")
 
             # --- ファイル保存 ---
-            content_rel_path = f"content/{subdirs[content_type]}/{filename_base}.{ext}"
-            thumb_rel_path = f"content/thumbnail/{filename_base}_thumb.jpg"
+            content_rel_path = f"/content/{subdirs[content_type]}/{filename_base}.{ext}"
+            thumb_rel_path = f"/content/thumbnail/{filename_base}_thumb.jpg"
 
             content_abs_path = os.path.join(current_app.root_path, content_rel_path)
             thumb_abs_path = os.path.join(current_app.root_path, thumb_rel_path)

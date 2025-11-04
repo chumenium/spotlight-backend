@@ -2,10 +2,9 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify,send_from_directory,send_file
+from flask import Flask, jsonify,send_from_directory
 from flask_cors import CORS
 import os
-import mimetypes
 
 # 設定のインポート
 from config import config
@@ -51,20 +50,7 @@ def create_app(config_name='default'):
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
         icon_dir = os.path.join(app.root_path, 'icon')
-        file_path = os.path.join(icon_dir, filename)
-
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
-
-        # 🔍 ファイルの拡張子に基づいて MIMEタイプを自動判定
-        mimetype, _ = mimetypes.guess_type(file_path)
-
-        # 判定できなかった場合のフォールバック
-        if mimetype is None:
-            mimetype = 'application/octet-stream'
-
-        # 📤 ファイル送信
-        return send_file(file_path, mimetype=mimetype, as_attachment=False)
+        return send_from_directory(icon_dir, filename)
 
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
@@ -97,6 +83,16 @@ def create_app(config_name='default'):
             "origins": app.config['CORS_ORIGINS'],
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization"]
+        },
+        r"/icon/*": {
+            "origins": app.config['CORS_ORIGINS'],
+            "methods": ["GET", "OPTIONS"],
+            "allow_headers": ["Content-Type"]
+        },
+        r"/content/*": {
+            "origins": app.config['CORS_ORIGINS'],
+            "methods": ["GET", "OPTIONS"],
+            "allow_headers": ["Content-Type"]
         }
     })
     
