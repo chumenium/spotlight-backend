@@ -2,9 +2,10 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, send_file
 from flask_cors import CORS
 import os
+import mimetypes
 
 # 設定のインポート
 from config import config
@@ -50,8 +51,30 @@ def create_app(config_name='default'):
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
         icon_dir = os.path.join(app.root_path, 'icon')
-        # send_from_directoryを使用（他のファイルで動作確認済み）
-        return send_from_directory(icon_dir, filename)
+        file_path = os.path.join(icon_dir, filename)
+        
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+        
+        # ファイルサイズを取得
+        file_size = os.path.getsize(file_path)
+        
+        # 大きなファイル（100KB以上）の場合はsend_fileを使用
+        # 小さなファイルはsend_from_directoryを使用（既に動作確認済み）
+        if file_size > 100 * 1024:  # 100KB以上
+            mimetype, _ = mimetypes.guess_type(file_path)
+            if mimetype is None:
+                mimetype = 'image/jpeg'
+            # send_fileを使用し、conditional=Falseで条件付きリクエストを無効化
+            return send_file(
+                file_path,
+                mimetype=mimetype,
+                conditional=False,  # ETagや条件付きリクエストを無効化
+                as_attachment=False
+            )
+        else:
+            # 小さなファイルは従来通りsend_from_directoryを使用
+            return send_from_directory(icon_dir, filename)
 
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
