@@ -222,14 +222,14 @@ def change_icon():
             save_dir = os.path.join(current_app.root_path, "icon")
             os.makedirs(save_dir, exist_ok=True)
 
-            filename = f"{username}_icon.png"
+            filename = f"{username}.png"
             save_path = os.path.join(save_dir, filename)
             # ===== 画像を保存 =====
             # Base64 → バイナリ書き込み
             with open(save_path, "wb") as f:
                 f.write(base64.b64decode(file))
         else:
-            filename = "default_icon.jpg"
+            filename = "defaulticon.jpg"
         iconimgpath = f"/icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====
