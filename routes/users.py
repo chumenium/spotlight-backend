@@ -204,8 +204,6 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
-        print(type(file))
-        print(file)
         if file:
             if file.startswith("data:image"):
                 file = file.split(",")[1]
@@ -226,16 +224,13 @@ def change_icon():
 
             filename = f"{username}_icon.png"
             save_path = os.path.join(save_dir, filename)
-            print(save_path)
-            print("--------------------------------------------------------------------------")
-            print(file)
             # ===== 画像を保存 =====
             # Base64 → バイナリ書き込み
             with open(save_path, "wb") as f:
                 f.write(base64.b64decode(file))
         else:
             filename = "default_icon.jpg"
-        iconimgpath = f"/icon/{filename}"
+        iconimgpath = f"icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====
         
