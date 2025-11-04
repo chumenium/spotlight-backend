@@ -234,8 +234,9 @@ def change_icon():
 
         # ===== DBにパスを保存（相対パスで） =====
         
+        print(iconimgpath)
         chenge_icon(uid, iconimgpath)
-
+        
         return jsonify({
             "status": "success",
             "message": "アイコンを変更しました。",

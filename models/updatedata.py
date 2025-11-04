@@ -101,7 +101,6 @@ def disable_notification(userID):
 #実装済み
 #----------------アイコンを変更----------------
 def chenge_icon(userID, iconimgpath):
-    """通知履歴を追加"""
     try:
         conn = get_connection()
         cur = conn.cursor()
