@@ -66,6 +66,7 @@ def create_app(config_name='default'):
             if mimetype is None:
                 mimetype = 'image/jpeg'
             # send_fileを使用し、conditional=Falseで条件付きリクエストを無効化
+            print("読み込もうとしたファイルは100KB以上です")
             return send_file(
                 file_path,
                 mimetype=mimetype,
