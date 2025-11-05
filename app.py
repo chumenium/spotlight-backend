@@ -57,7 +57,7 @@ def create_app(config_name='default'):
     # ============================================
     # 汎用：チャンク（分割）送信関数
     # ============================================
-    def generate_file_chunks(file_path, chunk_size=65536):
+    def generate_file_chunks(file_path, chunk_size=32768):
         """ファイルをチャンク単位で読み込むジェネレーター"""
         with open(file_path, 'rb') as f:
             while chunk := f.read(chunk_size):
