@@ -2,7 +2,7 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify, send_from_directory, send_file,Response
+from flask import Flask, jsonify, send_from_directory, send_file, Response, request
 from flask_cors import CORS
 import os
 import mimetypes
@@ -57,11 +57,15 @@ def create_app(config_name='default'):
     # ============================================
     # 汎用：チャンク（分割）送信関数
     # ============================================
-    def generate_file_chunks(file_path, chunk_size=32768):
+    def generate_file_chunks(file_path, chunk_size=512*1024):
         """ファイルをチャンク単位で読み込むジェネレーター"""
-        with open(file_path, 'rb') as f:
-            while chunk := f.read(chunk_size):
-                yield chunk
+        try:
+            with open(file_path, 'rb') as f:
+                while chunk := f.read(chunk_size):
+                    yield chunk
+        except Exception as e:
+            print(f"⚠️ ファイル読み込みエラー: {e}")
+            raise
 
 
     # ============================================
@@ -69,29 +73,55 @@ def create_app(config_name='default'):
     # ============================================
     def stream_with_range_support(file_path, mimetype):
         """HTTP Range対応の部分送信"""
-        range_header = request.headers.get('Range', None)
-        if not range_header:
-            return Response(generate_file_chunks(file_path), mimetype=mimetype)
+        try:
+            size = os.path.getsize(file_path)
+            range_header = request.headers.get('Range', None)
+            
+            if not range_header:
+                # Rangeリクエストがない場合は通常のチャンク送信
+                response = Response(
+                    generate_file_chunks(file_path), 
+                    mimetype=mimetype
+                )
+                response.headers['Content-Length'] = str(size)
+                response.headers['Accept-Ranges'] = 'bytes'
+                return response
 
-        size = os.path.getsize(file_path)
-        byte1, byte2 = 0, None
-        match = re.search(r'bytes=(\d+)-(\d*)', range_header)
-        if match:
-            g = match.groups()
-            byte1 = int(g[0])
-            if g[1]:
-                byte2 = int(g[1])
+            # Rangeリクエストの処理
+            byte1, byte2 = 0, None
+            match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+            if match:
+                g = match.groups()
+                byte1 = int(g[0])
+                if g[1]:
+                    byte2 = int(g[1])
+            
+            # 範囲の検証
+            if byte1 >= size:
+                return Response('Range Not Satisfiable', status=416)
+            
+            # 範囲の計算
+            if byte2 is None:
+                byte2 = size - 1
+            else:
+                byte2 = min(byte2, size - 1)
+            
+            length = byte2 - byte1 + 1
+            
+            # ファイルの指定範囲を読み込み
+            with open(file_path, 'rb') as f:
+                f.seek(byte1)
+                data = f.read(length)
 
-        length = size - byte1 if byte2 is None else byte2 - byte1 + 1
-        with open(file_path, 'rb') as f:
-            f.seek(byte1)
-            data = f.read(length)
-
-        rv = Response(data, 206, mimetype=mimetype, direct_passthrough=True)
-        rv.headers.add('Content-Range', f'bytes {byte1}-{byte1 + length - 1}/{size}')
-        rv.headers.add('Accept-Ranges', 'bytes')
-        rv.headers.add('Content-Length', str(length))
-        return rv
+            response = Response(data, status=206, mimetype=mimetype)
+            response.headers['Content-Range'] = f'bytes {byte1}-{byte2}/{size}'
+            response.headers['Accept-Ranges'] = 'bytes'
+            response.headers['Content-Length'] = str(length)
+            return response
+            
+        except Exception as e:
+            print(f"⚠️ Range送信エラー: {e}")
+            return jsonify({"error": "Failed to stream file"}), 500
 
 
     # ============================================
@@ -99,15 +129,28 @@ def create_app(config_name='default'):
     # ============================================
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
-        file_path = os.path.join(ICON_DIR, filename)
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+        try:
+            file_path = os.path.join(ICON_DIR, filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
 
-        mimetype, _ = mimetypes.guess_type(file_path)
-        if mimetype is None:
-            mimetype = 'image/jpeg'
+            mimetype, _ = mimetypes.guess_type(file_path)
+            if mimetype is None:
+                mimetype = 'image/jpeg'
 
-        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+            # ファイルサイズを取得してContent-Lengthヘッダーを設定
+            file_size = os.path.getsize(file_path)
+            response = Response(
+                generate_file_chunks(file_path), 
+                mimetype=mimetype
+            )
+            response.headers['Content-Length'] = str(file_size)
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+            
+        except Exception as e:
+            print(f"⚠️ アイコン送信エラー: {e}")
+            return jsonify({"error": "Failed to serve icon"}), 500
 
 
     # ============================================
@@ -115,11 +158,15 @@ def create_app(config_name='default'):
     # ============================================
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
-        file_path = os.path.join(CONTENT_DIR, 'movie', filename)
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+        try:
+            file_path = os.path.join(CONTENT_DIR, 'movie', filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
 
-        return stream_with_range_support(file_path, mimetype='video/mp4')
+            return stream_with_range_support(file_path, mimetype='video/mp4')
+        except Exception as e:
+            print(f"⚠️ 動画送信エラー: {e}")
+            return jsonify({"error": "Failed to serve movie"}), 500
 
 
     # ============================================
@@ -127,15 +174,19 @@ def create_app(config_name='default'):
     # ============================================
     @app.route('/content/audio/<path:filename>')
     def serve_audio(filename):
-        file_path = os.path.join(CONTENT_DIR, 'audio', filename)
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+        try:
+            file_path = os.path.join(CONTENT_DIR, 'audio', filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
 
-        mimetype, _ = mimetypes.guess_type(file_path)
-        if mimetype is None:
-            mimetype = 'audio/mpeg'
+            mimetype, _ = mimetypes.guess_type(file_path)
+            if mimetype is None:
+                mimetype = 'audio/mpeg'
 
-        return stream_with_range_support(file_path, mimetype=mimetype)
+            return stream_with_range_support(file_path, mimetype=mimetype)
+        except Exception as e:
+            print(f"⚠️ 音声送信エラー: {e}")
+            return jsonify({"error": "Failed to serve audio"}), 500
 
 
     # ============================================
@@ -143,15 +194,27 @@ def create_app(config_name='default'):
     # ============================================
     @app.route('/content/picture/<path:filename>')
     def serve_picture(filename):
-        file_path = os.path.join(CONTENT_DIR, 'picture', filename)
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+        try:
+            file_path = os.path.join(CONTENT_DIR, 'picture', filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
 
-        mimetype, _ = mimetypes.guess_type(file_path)
-        if mimetype is None:
-            mimetype = 'image/jpeg'
+            mimetype, _ = mimetypes.guess_type(file_path)
+            if mimetype is None:
+                mimetype = 'image/jpeg'
 
-        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+            file_size = os.path.getsize(file_path)
+            response = Response(
+                generate_file_chunks(file_path), 
+                mimetype=mimetype
+            )
+            response.headers['Content-Length'] = str(file_size)
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+            
+        except Exception as e:
+            print(f"⚠️ 画像送信エラー: {e}")
+            return jsonify({"error": "Failed to serve picture"}), 500
 
 
     # ============================================
@@ -159,15 +222,27 @@ def create_app(config_name='default'):
     # ============================================
     @app.route('/content/thumbnail/<path:filename>')
     def serve_thumbnail(filename):
-        file_path = os.path.join(CONTENT_DIR, 'thumbnail', filename)
-        if not os.path.exists(file_path):
-            return jsonify({"error": "File not found"}), 404
+        try:
+            file_path = os.path.join(CONTENT_DIR, 'thumbnail', filename)
+            if not os.path.exists(file_path):
+                return jsonify({"error": "File not found"}), 404
 
-        mimetype, _ = mimetypes.guess_type(file_path)
-        if mimetype is None:
-            mimetype = 'image/jpeg'
+            mimetype, _ = mimetypes.guess_type(file_path)
+            if mimetype is None:
+                mimetype = 'image/jpeg'
 
-        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+            file_size = os.path.getsize(file_path)
+            response = Response(
+                generate_file_chunks(file_path), 
+                mimetype=mimetype
+            )
+            response.headers['Content-Length'] = str(file_size)
+            response.headers['Cache-Control'] = 'public, max-age=3600'
+            return response
+            
+        except Exception as e:
+            print(f"⚠️ サムネイル送信エラー: {e}")
+            return jsonify({"error": "Failed to serve thumbnail"}), 500
 
 
 
