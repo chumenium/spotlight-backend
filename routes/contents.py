@@ -164,6 +164,8 @@ def content_detail():
 
         spotlightflag = get_user_spotlight_flag(uid,nextcontentID)
         insert_play_history(userID=uid,contentID=nextcontentID)
+        print("username:",detail[6])
+        print("contentpath:",detail[1])
         return jsonify({
             "status": "success",
             "data": {
