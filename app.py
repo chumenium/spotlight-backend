@@ -2,10 +2,11 @@
 SpotLight バックエンド API
 Flaskアプリケーションのメインファイル
 """
-from flask import Flask, jsonify, send_from_directory, send_file
+from flask import Flask, jsonify, send_from_directory, send_file,Response
 from flask_cors import CORS
 import os
 import mimetypes
+import re
 
 # 設定のインポート
 from config import config
@@ -47,55 +48,181 @@ def create_app(config_name='default'):
     
 
     
-    # === 静的ファイルのルート定義 ===
+    # === 各ディレクトリの定義 ===
+    BASE_DIR = app.root_path
+    ICON_DIR = os.path.join(BASE_DIR, 'icon')
+    CONTENT_DIR = os.path.join(BASE_DIR, 'content')
+
+
+    # ============================================
+    # 汎用：チャンク（分割）送信関数
+    # ============================================
+    def generate_file_chunks(file_path, chunk_size=65536):
+        """ファイルをチャンク単位で読み込むジェネレーター"""
+        with open(file_path, 'rb') as f:
+            while chunk := f.read(chunk_size):
+                yield chunk
+
+
+    # ============================================
+    # Rangeリクエスト対応（動画・音声などに必要）
+    # ============================================
+    def stream_with_range_support(file_path, mimetype):
+        """HTTP Range対応の部分送信"""
+        range_header = request.headers.get('Range', None)
+        if not range_header:
+            return Response(generate_file_chunks(file_path), mimetype=mimetype)
+
+        size = os.path.getsize(file_path)
+        byte1, byte2 = 0, None
+        match = re.search(r'bytes=(\d+)-(\d*)', range_header)
+        if match:
+            g = match.groups()
+            byte1 = int(g[0])
+            if g[1]:
+                byte2 = int(g[1])
+
+        length = size - byte1 if byte2 is None else byte2 - byte1 + 1
+        with open(file_path, 'rb') as f:
+            f.seek(byte1)
+            data = f.read(length)
+
+        rv = Response(data, 206, mimetype=mimetype, direct_passthrough=True)
+        rv.headers.add('Content-Range', f'bytes {byte1}-{byte1 + length - 1}/{size}')
+        rv.headers.add('Accept-Ranges', 'bytes')
+        rv.headers.add('Content-Length', str(length))
+        return rv
+
+
+    # ============================================
+    # 1️⃣ アイコン送信（チャンク送信）
+    # ============================================
     @app.route('/icon/<path:filename>')
     def serve_icon(filename):
-        icon_dir = os.path.join(app.root_path, 'icon')
-        file_path = os.path.join(icon_dir, filename)
-        
+        file_path = os.path.join(ICON_DIR, filename)
         if not os.path.exists(file_path):
             return jsonify({"error": "File not found"}), 404
-        
-        # ファイルサイズを取得
-        file_size = os.path.getsize(file_path)
-        
-        # 大きなファイル（100KB以上）の場合はsend_fileを使用
-        # 小さなファイルはsend_from_directoryを使用（既に動作確認済み）
-        if file_size > 100 * 1024:  # 100KB以上
-            mimetype, _ = mimetypes.guess_type(file_path)
-            if mimetype is None:
-                mimetype = 'image/jpeg'
-            # send_fileを使用し、conditional=Falseで条件付きリクエストを無効化
-            print("読み込もうとしたファイルは100KB以上です")
-            return send_file(
-                file_path,
-                mimetype=mimetype,
-                conditional=False,  # ETagや条件付きリクエストを無効化
-                as_attachment=False
-            )
-        else:
-            # 小さなファイルは従来通りsend_from_directoryを使用
-            return send_from_directory(icon_dir, filename)
 
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if mimetype is None:
+            mimetype = 'image/jpeg'
+
+        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+
+
+    # ============================================
+    # 2️⃣ 動画送信（Range対応・分割送信）
+    # ============================================
     @app.route('/content/movie/<path:filename>')
     def serve_movie(filename):
-        movie_dir = os.path.join(app.root_path, 'content', 'movie')
-        return send_from_directory(movie_dir, filename)
+        file_path = os.path.join(CONTENT_DIR, 'movie', filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
 
+        return stream_with_range_support(file_path, mimetype='video/mp4')
+
+
+    # ============================================
+    # 3️⃣ 音声送信（Range対応・分割送信）
+    # ============================================
     @app.route('/content/audio/<path:filename>')
     def serve_audio(filename):
-        audio_dir = os.path.join(app.root_path, 'content', 'audio')
-        return send_from_directory(audio_dir, filename)
+        file_path = os.path.join(CONTENT_DIR, 'audio', filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
 
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if mimetype is None:
+            mimetype = 'audio/mpeg'
+
+        return stream_with_range_support(file_path, mimetype=mimetype)
+
+
+    # ============================================
+    # 4️⃣ 画像送信（チャンク送信）
+    # ============================================
     @app.route('/content/picture/<path:filename>')
     def serve_picture(filename):
-        picture_dir = os.path.join(app.root_path, 'content', 'picture')
-        return send_from_directory(picture_dir, filename)
+        file_path = os.path.join(CONTENT_DIR, 'picture', filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
 
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if mimetype is None:
+            mimetype = 'image/jpeg'
+
+        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+
+
+    # ============================================
+    # 5️⃣ サムネイル送信（チャンク送信）
+    # ============================================
     @app.route('/content/thumbnail/<path:filename>')
     def serve_thumbnail(filename):
-        thumbnail_dir = os.path.join(app.root_path, 'content', 'thumbnail')
-        return send_from_directory(thumbnail_dir, filename)
+        file_path = os.path.join(CONTENT_DIR, 'thumbnail', filename)
+        if not os.path.exists(file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        mimetype, _ = mimetypes.guess_type(file_path)
+        if mimetype is None:
+            mimetype = 'image/jpeg'
+
+        return Response(generate_file_chunks(file_path), mimetype=mimetype)
+
+
+
+
+
+
+    # # === 静的ファイルのルート定義 ===
+    # @app.route('/icon/<path:filename>')
+    # def serve_icon(filename):
+    #     icon_dir = os.path.join(app.root_path, 'icon')
+    #     file_path = os.path.join(icon_dir, filename)
+        
+    #     if not os.path.exists(file_path):
+    #         return jsonify({"error": "File not found"}), 404
+        
+    #     # ファイルサイズを取得
+    #     file_size = os.path.getsize(file_path)
+        
+    #     # 大きなファイル（100KB以上）の場合はsend_fileを使用
+    #     # 小さなファイルはsend_from_directoryを使用（既に動作確認済み）
+    #     if file_size > 100 * 1024:  # 100KB以上
+    #         mimetype, _ = mimetypes.guess_type(file_path)
+    #         if mimetype is None:
+    #             mimetype = 'image/jpeg'
+    #         # send_fileを使用し、conditional=Falseで条件付きリクエストを無効化
+    #         print("読み込もうとしたファイルは100KB以上です")
+    #         return send_file(
+    #             file_path,
+    #             mimetype=mimetype,
+    #             conditional=False,  # ETagや条件付きリクエストを無効化
+    #             as_attachment=False
+    #         )
+    #     else:
+    #         # 小さなファイルは従来通りsend_from_directoryを使用
+    #         return send_from_directory(icon_dir, filename)
+
+    # @app.route('/content/movie/<path:filename>')
+    # def serve_movie(filename):
+    #     movie_dir = os.path.join(app.root_path, 'content', 'movie')
+    #     return send_from_directory(movie_dir, filename)
+
+    # @app.route('/content/audio/<path:filename>')
+    # def serve_audio(filename):
+    #     audio_dir = os.path.join(app.root_path, 'content', 'audio')
+    #     return send_from_directory(audio_dir, filename)
+
+    # @app.route('/content/picture/<path:filename>')
+    # def serve_picture(filename):
+    #     picture_dir = os.path.join(app.root_path, 'content', 'picture')
+    #     return send_from_directory(picture_dir, filename)
+
+    # @app.route('/content/thumbnail/<path:filename>')
+    # def serve_thumbnail(filename):
+    #     thumbnail_dir = os.path.join(app.root_path, 'content', 'thumbnail')
+    #     return send_from_directory(thumbnail_dir, filename)
     
 
 
