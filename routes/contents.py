@@ -3,12 +3,17 @@
 """
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
-from models.updatedata import spotlight_on, spotlight_off
-from models.selectdata import get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,get_search_contents, get_playlists_with_thumbnail, get_playlist_contents
+from models.updatedata import spotlight_on, spotlight_off,add_playnum
+from models.selectdata import (
+    get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
+    get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
+    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id
+)
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
 )
+from utils.notification import send_push_notification
 
 import base64
 import os
@@ -33,6 +38,7 @@ def add_content():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
+        username, iconimgpath = get_user_name_iconpath(uid)
 
         # --- 受信データ ---
         content_type = data.get("type")      # "video" | "image" | "audio" | "text"
@@ -64,7 +70,7 @@ def add_content():
 
             # --- ファイル名作成 ---
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-            filename_base = f"{uid}_{timestamp}"
+            filename_base = f"{username}_{timestamp}"
 
             # --- ファイル拡張子設定 ---
             ext_map = {"video": "mp4", "image": "jpg", "audio": "mp3"}
@@ -128,17 +134,33 @@ def add_comment():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         parentcommentid = data.get("parentcommentID")
+        contentID = data.get("contentID")
+        user_data = get_user_by_id(uid)
+        post_username = user_data["username"]
         if parentcommentid:
             insert_comment(
-                userID=uid,
-                commenttext=data.get("commenttext")
-            )
-        else:
-            insert_comment(
+                contentID=contentID,
                 userID=uid,
                 commenttext=data.get("commenttext"),
                 parentcommentID=parentcommentid
             )
+            #投稿もとのコメント主に通知を送信
+            posted_by_user_data = get_user_by_parentcomment_id(contentID, parentcommentid)
+            if posted_by_user_data["notificationenabled"]:
+                send_push_notification(posted_by_user_data["token"], "コメントが投稿されました","あなたが投稿したコメントに"+post_username+"さんがコメントを投稿しました")
+        else:
+            insert_comment(
+                contentID=contentID,
+                userID=uid,
+                commenttext=data.get("commenttext"),
+            )
+            #投稿元のユーザに通知を送信
+            content_user_data = get_user_by_content_id(contentID)
+            if content_user_data["notificationenabled"]:
+                title = content_user_data["title"]
+                send_push_notification(content_user_data["token"], "コメントが投稿されました",title+"に"+post_username+"さんがコメントを投稿しました")
+
+
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
         print("⚠️エラー:", e)
@@ -146,7 +168,7 @@ def add_comment():
 
 
 # ===============================
-# 3️⃣ コンテンツ再生
+# 3️⃣ コンテンツ読み込み
 # ===============================
 @content_bp.route('/detail', methods=['POST'])
 @jwt_required
@@ -187,6 +209,23 @@ def content_detail():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+#===============================
+#再生回数追加
+#===============================
+@content_bp.route('/playnum', methods=['POST'])
+@jwt_required
+def playnum_add_route():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        contentID = data.get("contentID")
+        add_playnum(contentID)
+        return jsonify({"status": "success", "message": "再生回数を追加"}), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 # ===============================
 # 4️⃣ スポットライトON
 # ===============================
@@ -198,6 +237,12 @@ def spotlight_on_route():
         data = request.get_json()
         contentID = data.get("contentID")
         spotlight_on(contentID, uid)
+        #投稿元のユーザに通知を送信
+        content_user_data = get_user_by_content_id(contentID)
+        if content_user_data["notificationenabled"]:
+            spotlight_user = get_user_by_id(uid)
+            title = content_user_data["title"]
+            send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
         print("⚠️エラー:", e)

@@ -37,16 +37,16 @@ def add_content_and_link_to_users(contentpath, link, title, userID, thumbnailpat
 
 #実装済み
 #----------------コメントを追加----------------
-def insert_comment(userID, commenttext, parentcommentID=None):
+def insert_comment(contentID, userID, commenttext, parentcommentID=None):
     """コメントを追加"""
     try:
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("""
             INSERT INTO comment (contentID, userID, commenttext, parentcommentID)
-            VALUES (%s, %s, %s)
+            VALUES (%s, %s, %s, %s)
             RETURNING commentID;
-        """, (userID, commenttext, parentcommentID))
+        """, (contentID, userID, commenttext, parentcommentID))
         comment_id = cur.fetchone()[0]
         conn.commit()
         print(f"✅ commentID={comment_id} を追加しました。")

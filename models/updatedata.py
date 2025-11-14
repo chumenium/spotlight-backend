@@ -115,3 +115,24 @@ def chenge_icon(userID, iconimgpath):
     finally:
         if conn:
             release_connection(conn)
+
+
+#----------------再生回数を追加----------------
+def add_playnum(contentID):
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        with conn.cursor() as cur:
+            # 再生回数を+1
+            cur.execute("""
+                UPDATE content
+                SET playnum = playnum + 1
+                WHERE contentID = %s;
+            """, (contentID,))
+        conn.commit()
+        print(f"Add play count")
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)

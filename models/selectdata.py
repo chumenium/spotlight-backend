@@ -44,6 +44,62 @@ def get_user_by_id(userID):
         if conn:
             release_connection(conn)
 
+
+
+def get_user_by_content_id(contentID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT u.userID, u.username, u.iconimgpath, u.token, u.notificationenabled c.title FROM content c JOIN "user" u ON c.userID = u.userID WHERE c.contentID = %s',
+                (contentID,)
+            )
+            row = cur.fetchone()
+        if row:
+            return {
+                "userID": row[0],
+                "username": row[1],
+                "iconimgpath": row[2],
+                "token": row[3],
+                "notificationenabled": row[4],
+                "title": row[5],
+            }
+        return None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
+def get_user_by_parentcomment_id(contentID,parentcommentID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                'SELECT u.userID, u.username, u.iconimgpath, u.token, u.notificationenabled FROM coment c JOIN "user" u ON c.userID = u.userID WHERE c.contentID = %s contentID = %s',
+                (contentID,parentcommentID)
+            )
+            row = cur.fetchone()
+        if row:
+            return {
+                "userID": row[0],
+                "username": row[1],
+                "iconimgpath": row[2],
+                "token": row[3],
+                "notificationenabled": row[4],
+            }
+        return None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 def user_exists(userID):
     """ユーザーが存在するか確認"""
     conn = None
@@ -151,12 +207,6 @@ def get_content_detail(contentID):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            # 再生回数を+1
-            cur.execute("""
-                UPDATE content
-                SET playnum = playnum + 1
-                WHERE contentID = %s;
-            """, (contentID,))
             
             # 詳細情報を取得
             cur.execute("""
