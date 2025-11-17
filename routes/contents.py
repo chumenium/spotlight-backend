@@ -185,7 +185,7 @@ def content_detail():
         #     return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
 
         spotlightflag = get_user_spotlight_flag(uid,nextcontentID)
-        insert_play_history(userID=uid,contentID=nextcontentID)
+        
         print("username:",detail[6])
         print("contentpath:",detail[1])
         return jsonify({
@@ -219,7 +219,8 @@ def playnum_add_route():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         contentID = data.get("contentID")
-        add_playnum(contentID)
+        #add_playnum(contentID)
+        insert_play_history(userID=uid,contentID=contentID)
         return jsonify({"status": "success", "message": "再生回数を追加"}), 200
     except Exception as e:
         print("⚠️エラー:", e)
