@@ -52,7 +52,7 @@ def get_user_by_content_id(contentID):
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute(
-                'SELECT u.userID, u.username, u.iconimgpath, u.token, u.notificationenabled c.title FROM content c JOIN "user" u ON c.userID = u.userID WHERE c.contentID = %s',
+                'SELECT u.userID, u.username, u.iconimgpath, u.token, u.notificationenabled, c.title FROM content c JOIN "user" u ON c.userID = u.userID WHERE c.contentID = %s',
                 (contentID,)
             )
             row = cur.fetchone()
