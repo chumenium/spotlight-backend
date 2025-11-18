@@ -161,18 +161,42 @@ def get_play_content_id(contentID):
         conn = get_connection()
         with conn.cursor() as cur:
             if contentID:
+                # ① 指定された contentID の投稿時間を取得
                 cur.execute(
-                    'SELECT MIN(contentid) FROM content WHERE contentid > %s',
+                    "SELECT posttimestamp FROM content WHERE contentID = %s",
                     (contentID,)
                 )
                 row = cur.fetchone()
-            else:
+                if not row:
+                    return None
+                
+                post_time = row[0]
+
+                # ② その時間より後に投稿された最初のコンテンツを取得
                 cur.execute(
-                    'SELECT MIN(contentid) FROM content'
+                    """
+                    SELECT contentID 
+                    FROM content
+                    WHERE posttimestamp < %s
+                    ORDER BY posttimestamp DESC
+                    LIMIT 1
+                    """,
+                    (post_time,)
                 )
-                row = cur.fetchone()
-        if row:
-            return row[0]
+                next_row = cur.fetchone()
+            else:
+                # contentID が無い場合 → 最新投稿の contentID を取得
+                cur.execute(
+                    """
+                    SELECT contentID
+                    FROM content
+                    ORDER BY posttimestamp DESC
+                    LIMIT 1
+                    """
+                )
+                next_row = cur.fetchone()
+        if next_row:
+            return next_row[0]
         return None
     except psycopg2.Error as e:
         print("データベースエラー:", e)

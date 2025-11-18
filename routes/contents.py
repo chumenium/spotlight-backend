@@ -210,7 +210,7 @@ def content_detail():
 
 
 #===============================
-#再生回数追加
+#再生回数追加+再生履歴の追加
 #===============================
 @content_bp.route('/playnum', methods=['POST'])
 @jwt_required
@@ -219,7 +219,7 @@ def playnum_add_route():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         contentID = data.get("contentID")
-        #add_playnum(contentID)
+        add_playnum(contentID)
         insert_play_history(userID=uid,contentID=contentID)
         return jsonify({"status": "success", "message": "再生回数を追加"}), 200
     except Exception as e:
