@@ -207,29 +207,21 @@ def change_icon():
         if file:
             if file.startswith("data:image"):
                 file = file.split(",")[1]
-            # ===== Base64文字列のヘッダーを除去 =====
-            # match = re.match(r"^data:image\/(png|jpeg|jpg|webp|gif);base64,(.+)$", file)
-            # if not match:
-            #     return jsonify({
-            #         "status": "error",
-            #         "message": "不正な画像データです。"
-            #     }), 400
-
-            # ext = match.group(1)
-            # img_data = base64.b64decode(match.group(2))
-
+            
             # ===== 保存パス設定 =====
             save_dir = os.path.join(current_app.root_path, "icon")
             os.makedirs(save_dir, exist_ok=True)
 
             filename = f"{username}_icon.png"
             save_path = os.path.join(save_dir, filename)
-            # ===== 画像を保存 =====
+            
+            # ===== 画像を保存（ローカルサーバー） =====
             # Base64 → バイナリ書き込み
             with open(save_path, "wb") as f:
                 f.write(base64.b64decode(file))
         else:
             filename = "default_icon.jpg"
+        
         iconimgpath = f"/icon/{filename}"
 
         # ===== DBにパスを保存（相対パスで） =====

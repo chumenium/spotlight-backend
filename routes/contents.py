@@ -19,6 +19,7 @@ import base64
 import os
 from datetime import datetime
 from flask import current_app
+from utils.s3 import upload_to_s3, get_cloudfront_url, get_content_type_from_extension
 
 
 content_bp = Blueprint('content', __name__, url_prefix='/api/content')
@@ -57,16 +58,13 @@ def add_content():
                     "message": "必要なデータが不足しています"
                 }), 400
 
-            # --- パス設定 ---
-            base_dir = os.path.join(current_app.root_path, "content")
+            # --- フォルダマッピング ---
             subdirs = {
                 "video": "movie",
                 "image": "picture",
                 "audio": "audio",
                 "thumbnail": "thumbnail"
             }
-            for sub in subdirs.values():
-                os.makedirs(os.path.join(base_dir, sub), exist_ok=True)
 
             # --- ファイル名作成 ---
             timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
@@ -76,24 +74,42 @@ def add_content():
             ext_map = {"video": "mp4", "image": "jpg", "audio": "mp3"}
             ext = ext_map.get(content_type, "dat")
 
-            # --- ファイル保存 ---
-            content_rel_path = f"content/{subdirs[content_type]}/{filename_base}.{ext}"
-            thumb_rel_path = f"content/thumbnail/{filename_base}_thumb.jpg"
+            # --- ファイル名 ---
+            content_filename = f"{filename_base}.{ext}"
+            thumb_filename = f"{filename_base}_thumb.jpg"
 
-            content_abs_path = os.path.join(current_app.root_path, content_rel_path)
-            thumb_abs_path = os.path.join(current_app.root_path, thumb_rel_path)
+            # --- Base64 → バイナリ変換 ---
+            content_binary = base64.b64decode(file_data)
+            thumb_binary = base64.b64decode(thumb_data)
 
-            # Base64 → バイナリ書き込み
-            with open(content_abs_path, "wb") as f:
-                f.write(base64.b64decode(file_data))
+            # --- S3にアップロード ---
+            content_folder = subdirs[content_type]
+            content_mime = get_content_type_from_extension(content_type, ext)
+            
+            # コンテンツ本体をS3にアップロード
+            content_key = upload_to_s3(
+                file_data=content_binary,
+                folder=content_folder,
+                filename=content_filename,
+                content_type=content_mime
+            )
 
-            with open(thumb_abs_path, "wb") as f:
-                f.write(base64.b64decode(thumb_data))
+            # サムネイルをS3にアップロード
+            thumb_key = upload_to_s3(
+                file_data=thumb_binary,
+                folder="thumbnail",
+                filename=thumb_filename,
+                content_type="image/jpeg"
+            )
 
-            # --- DB登録 ---
+            # --- CloudFront URL生成 ---
+            content_url = get_cloudfront_url(content_folder, content_filename)
+            thumb_url = get_cloudfront_url("thumbnail", thumb_filename)
+
+            # --- DB登録（CloudFront URLを保存） ---
             content_id = add_content_and_link_to_users(
-                contentpath="/"+content_rel_path,
-                thumbnailpath="/"+thumb_rel_path,
+                contentpath=content_url,
+                thumbnailpath=thumb_url,
                 link=link,
                 title=title,
                 userID=uid
@@ -109,15 +125,24 @@ def add_content():
                 textflag="TRUE"
             )
 
-        return jsonify({
-            "status": "success",
-            "message": "コンテンツを追加しました。",
-            "data": {
-                "contentID": content_id,
-                "contentpath": content_rel_path,
-                "thumbnailpath": thumb_rel_path
-            }
-        }), 200
+        if content_type != "text":
+            return jsonify({
+                "status": "success",
+                "message": "コンテンツを追加しました。",
+                "data": {
+                    "contentID": content_id,
+                    "contentpath": content_url,
+                    "thumbnailpath": thumb_url
+                }
+            }), 200
+        else:
+            return jsonify({
+                "status": "success",
+                "message": "コンテンツを追加しました。",
+                "data": {
+                    "contentID": content_id
+                }
+            }), 200
 
     except Exception as e:
         print("⚠️エラー:", e)

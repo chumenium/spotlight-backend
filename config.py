@@ -4,6 +4,10 @@ SpotLight バックエンド設定
 """
 import os
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# 環境変数の読み込み（.envファイルから）
+load_dotenv()
 
 class Config:
     """基本設定クラス"""
@@ -36,6 +40,15 @@ class Config:
     # API設定
     API_RATE_LIMIT = '1000 per hour'
     API_RATE_LIMIT_PER_METHOD = '200 per hour'
+    
+    # AWS S3 & CloudFront設定
+    S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'spotlight-contents')
+    S3_REGION = os.getenv('S3_REGION', 'ap-northeast-1')
+    S3_ORIGIN_DOMAIN = os.getenv('S3_ORIGIN_DOMAIN', 'spotlight-contents.s3.ap-northeast-1.amazonaws.com')
+    CLOUDFRONT_DOMAIN = os.getenv('CLOUDFRONT_DOMAIN', 'd30se1secd7t6t.cloudfront.net')  # CloudFront Distribution Domain Name
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+    USE_CLOUDFRONT = os.getenv('USE_CLOUDFRONT', 'True') == 'True'  # CloudFrontを使用するかどうか
 
 class DevelopmentConfig(Config):
     """開発環境設定"""
