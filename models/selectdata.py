@@ -405,7 +405,7 @@ def get_playlist_contents(userID, playlistID):
                 FROM playlistdetail pd
                 JOIN content c ON pd.contentID = c.contentID
                 WHERE pd.userID = %s AND pd.playlistID = %s
-                ORDER BY pd.addedtimestamp DESC
+                
             """, (userID, playlistID))
             rows = cur.fetchall()
         return rows
