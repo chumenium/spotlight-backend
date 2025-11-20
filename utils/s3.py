@@ -52,13 +52,27 @@ def upload_to_s3(file_data, folder, filename, content_type='application/octet-st
         key = f"{folder}/{safe_filename}"
         
         # バイナリデータをアップロード
-        s3.put_object(
-            Bucket=bucket,
-            Key=key,
-            Body=file_data,
-            ContentType=content_type,
-            ACL='private'  # CloudFront経由でアクセスするためprivate
-        )
+        # ACLが無効化されているバケットでも動作するように、まずACLなしで試行
+        try:
+            s3.put_object(
+                Bucket=bucket,
+                Key=key,
+                Body=file_data,
+                ContentType=content_type,
+                ACL='private'  # CloudFront経由でアクセスするためprivate
+            )
+        except Exception as acl_error:
+            # ACLが無効化されている場合はACLなしで再試行
+            if 'AccessControlListNotSupported' in str(acl_error) or 'InvalidArgument' in str(acl_error):
+                print(f"⚠️ ACLが無効化されているため、ACLなしでアップロードします: {key}")
+                s3.put_object(
+                    Bucket=bucket,
+                    Key=key,
+                    Body=file_data,
+                    ContentType=content_type
+                )
+            else:
+                raise
         
         return key
     

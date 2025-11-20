@@ -35,6 +35,15 @@ class Config:
     # サーバー設定
     HOST = os.getenv('HOST', '0.0.0.0')
     PORT = int(os.getenv('PORT', '5000'))
+    
+    # AWS S3 & CloudFront設定
+    S3_BUCKET_NAME = os.getenv('S3_BUCKET_NAME', 'spotlight-contents')
+    S3_REGION = os.getenv('S3_REGION', 'ap-northeast-1')
+    S3_ORIGIN_DOMAIN = os.getenv('S3_ORIGIN_DOMAIN', 'spotlight-contents.s3.ap-northeast-1.amazonaws.com')
+    CLOUDFRONT_DOMAIN = os.getenv('CLOUDFRONT_DOMAIN', '')
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID', '')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
+    USE_CLOUDFRONT = os.getenv('USE_CLOUDFRONT', 'True') == 'True'
 
 class DevelopmentConfig(Config):
     """開発環境設定"""
