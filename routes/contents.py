@@ -173,7 +173,7 @@ def add_comment():
             posted_by_user_data = get_user_by_parentcomment_id(contentID, parentcommentid)
             if posted_by_user_data["notificationenabled"]:
                 send_push_notification(posted_by_user_data["token"], "コメントが投稿されました","あなたが投稿したコメントに"+post_username+"さんがコメントを投稿しました")
-                insert_notification(userID=posted_by_user_data["userID"],comCTID=contentID,comCMID=commentid)
+            insert_notification(userID=posted_by_user_data["userID"],comCTID=contentID,comCMID=commentid)
         else:
             commentid = insert_comment(
                 contentID=contentID,
@@ -185,7 +185,7 @@ def add_comment():
             if content_user_data["notificationenabled"]:
                 title = content_user_data["title"]
                 send_push_notification(content_user_data["token"], "コメントが投稿されました",title+"に"+post_username+"さんがコメントを投稿しました")
-                insert_notification(userID=content_user_data,comCTID=contentID,comCMID=commentid)
+            insert_notification(userID=content_user_data,comCTID=contentID,comCMID=commentid)
 
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
@@ -270,7 +270,7 @@ def spotlight_on_route():
             spotlight_user = get_user_by_id(uid)
             title = content_user_data["title"]
             send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
-            insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
+        insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
         print("⚠️エラー:", e)

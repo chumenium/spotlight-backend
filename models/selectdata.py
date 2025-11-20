@@ -516,14 +516,18 @@ def get_notification(uid):
                     cmu.username AS comment_user_name,
                     n.notificationtext,
                     n.notificationtitle,
-                    n.isread
+                    n.isread,
+                    cuc.thumbnailpath as spotlight_thumbnailpath,
+                    cmc.thumbnailpath as comment_thumbnailpath,
+                    cuu.iconimgpath as spotlight_iconimgpath,
+                    cmu.iconimgpath as comment_iconimgpath
                 FROM notification n 
                 LEFT JOIN "user" cuu ON n.contentuserUID = cuu.userID
                 LEFT JOIN content cuc ON n.contentuserCID = cuc.contentID
                 LEFT JOIN content cmc ON n.comCTID = cmc.contentID
                 LEFT JOIN comment cm 
                     ON n.comCTID = cm.contentID 
-                AND n.comCMID = cm.commentID
+                    AND n.comCMID = cm.commentID
                 LEFT JOIN "user" cmu ON cm.userID = cmu.userID
                 WHERE n.userID = %s
                 ORDER BY n.notificationtimestamp DESC;

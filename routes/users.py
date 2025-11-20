@@ -268,7 +268,11 @@ def get_notification_api():
                 comment_username,
                 notificationtext,
                 notificationtitle,
-                isread
+                isread,
+                spotlight_thumbnailpath,
+                comment_thumbnailpath,
+                spotlight_iconimgpath,
+                comment_iconimgpath
             ) = row
 
             # 日付フォーマット
@@ -282,13 +286,19 @@ def get_notification_api():
                 title = "スポットライトが当てられました"
                 text = f"{spotlight_username} さんがあなたの投稿にスポットライトを当てました"
                 nt_type = "spotlight"
+                iconpath = spotlight_iconimgpath
+                thumbnailpath = spotlight_thumbnailpath
+                contentID = contentuserCID
             #システム通知等のカスタム可能な通知
             elif notificationtext:
                 nt_type = "system"
                 contenttitle = None
                 title = notificationtitle
                 text = notificationtext
-            else:  # コメント通知
+                thumbnailpath = None
+                iconpath = "ここにシステム通知用のアイコンファイルパスを設定"
+                contentID = None
+            elif comCTID:  # コメント通知
                 contenttitle = comment_content_title
                 if parentcommentID:
                     text = f"{comment_username} さん：{commenttext}"
@@ -298,15 +308,22 @@ def get_notification_api():
                     text = f"{comment_username} さん：{commenttext}"
                     nt_type = "newcomment"
                     title = "新しいコメント"
+                iconpath = comment_iconimgpath
+                thumbnailpath = comment_thumbnailpath
+                contentID = comCTID
 
             notification_list.append({
                 "notificationID": notificationID,
-                "timestamp": timestamp_str,
+                "type": nt_type,
                 "title": title,
                 "text": text,
                 "contenttitle":contenttitle,
+                "iconpath":iconpath,
+                "thumbnailpath":thumbnailpath,
+                "contentID":contentID,
+                "timestamp": timestamp_str,
                 "isread":isread,
-                "type": nt_type,
+                
             })
 
         return jsonify({"status": "success", "data": notification_list}), 200
