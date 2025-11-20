@@ -513,7 +513,10 @@ def get_notification(uid):
                     cmc.title AS comment_content_title,
                     cm.commenttext,
                     cm.parentcommentID,
-                    cmu.username AS comment_user_name
+                    cmu.username AS comment_user_name,
+                    n.notificationtext,
+                    n.notificationtitle,
+                    n.isread
                 FROM notification n 
                 LEFT JOIN "user" cuu ON n.contentuserUID = cuu.userID
                 LEFT JOIN content cuc ON n.contentuserCID = cuc.contentID

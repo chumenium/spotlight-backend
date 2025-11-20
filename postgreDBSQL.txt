@@ -194,3 +194,7 @@ ALTER TABLE content ADD COLUMN textflag BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE notification
 ADD COLUMN isread BOOLEAN DEFAULT FALSE;
+ALTER TABLE notification
+ADD COLUMN notificationtext TEXT;
+ALTER TABLE notification
+ADD COLUMN notificationtitle TEXT;

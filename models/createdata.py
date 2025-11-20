@@ -142,15 +142,15 @@ def insert_play_history(userID, contentID):
 
 
 #----------------通知履歴を追加----------------
-def insert_notification(userID, contentuserCID=None, contentuserUID=None, comCTID=None, comCMID=None):
+def insert_notification(userID, contentuserCID=None, contentuserUID=None, comCTID=None, comCMID=None, notificationtext=None, notificationtitle=None):
     """通知履歴を追加"""
     try:
         conn = get_connection()
         cur = conn.cursor()
         cur.execute("""
-            INSERT INTO notification (userID, contentuserCID, contentuserUID, comCTID, comCMID)
-            VALUES (%s, %s, %s, %s, %s);
-        """, (userID, contentuserCID, contentuserUID, comCTID, comCMID))
+            INSERT INTO notification (userID, contentuserCID, contentuserUID, comCTID, comCMID, notificationtext, notificationtitle)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+        """, (userID, contentuserCID, contentuserUID, comCTID, comCMID, notificationtext, notificationtitle))
         conn.commit()
         print(f"✅ 通知履歴を追加しました。")
     except psycopg2.Error as e:

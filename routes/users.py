@@ -265,7 +265,10 @@ def get_notification_api():
                 comment_content_title,
                 commenttext,
                 parentcommentID,
-                comment_username
+                comment_username,
+                notificationtext,
+                notificationtitle,
+                isread
             ) = row
 
             # 日付フォーマット
@@ -275,25 +278,34 @@ def get_notification_api():
 
             # 通知タイプ判定
             if contentuserCID:  # スポットライト通知
-                title = spotlight_title
+                contenttitle = spotlight_title
+                title = "スポットライトが当てられました"
                 text = f"{spotlight_username} さんがあなたの投稿にスポットライトを当てました"
                 nt_type = "spotlight"
-
+            #システム通知等のカスタム可能な通知
+            elif notificationtext:
+                nt_type = "system"
+                contenttitle = None
+                title = notificationtitle
+                text = notificationtext
             else:  # コメント通知
-                title = comment_content_title
+                contenttitle = comment_content_title
                 if parentcommentID:
                     text = f"{comment_username} さん：{commenttext}"
                     nt_type = "replycomment"
+                    title = "コメントへの返信"
                 else:
                     text = f"{comment_username} さん：{commenttext}"
                     nt_type = "newcomment"
-                
+                    title = "新しいコメント"
 
             notification_list.append({
                 "notificationID": notificationID,
                 "timestamp": timestamp_str,
                 "title": title,
                 "text": text,
+                "contenttitle":contenttitle,
+                "isread":isread,
                 "type": nt_type,
             })
 
