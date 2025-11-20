@@ -275,24 +275,25 @@ def get_notification_api():
 
             # 通知タイプ判定
             if contentuserCID:  # スポットライト通知
-                title = "スポットライトが当てられました"
-                text = f"あなたが投稿した「{spotlight_title}」に {spotlight_username} さんがスポットライトを当てました"
+                title = spotlight_title
+                text = f"{spotlight_username} さんがあなたの投稿にスポットライトを当てました"
                 nt_type = "spotlight"
 
             else:  # コメント通知
-                title = "コメントが投稿されました"
+                title = comment_content_title
                 if parentcommentID:
-                    text = f"あなたが投稿したコメントに {comment_username} さんがコメントしました"
+                    text = f"{comment_username} さん：{commenttext}"
+                    nt_type = "replycomment"
                 else:
-                    text = f"あなたが投稿した「{comment_content_title}」に {comment_username} さんがコメントしました"
-                nt_type = "comment"
+                    text = f"{comment_username} さん：{commenttext}"
+                    nt_type = "newcomment"
+                
 
             notification_list.append({
                 "notificationID": notificationID,
                 "timestamp": timestamp_str,
                 "title": title,
                 "text": text,
-                "commenttext": commenttext,
                 "type": nt_type,
             })
 
