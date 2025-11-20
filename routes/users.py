@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum
+from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum,get_notification
 from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -237,6 +237,69 @@ def change_icon():
 
     except Exception as e:
         print("⚠️エラー(change_icon):", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+#通知一覧の取得処理
+@users_bp.route('/notification', methods=['POST'])
+@jwt_required
+def get_notification_api():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_notification(uid)
+
+        notification_list = []
+        for row in rows:
+            (
+                notificationID,
+                timestamp,
+                contentuserCID,
+                contentuserUID,
+                spotlight_username,
+                spotlight_title,
+                comCTID,
+                comCMID,
+                comment_content_title,
+                commenttext,
+                parentcommentID,
+                comment_username
+            ) = row
+
+            # 日付フォーマット
+            timestamp_str = (
+                timestamp.strftime("%Y-%m-%d %H:%M:%S") if timestamp else None
+            )
+
+            # 通知タイプ判定
+            if contentuserCID:  # スポットライト通知
+                title = "スポットライトが当てられました"
+                text = f"あなたが投稿した「{spotlight_title}」に {spotlight_username} さんがスポットライトを当てました"
+                nt_type = "spotlight"
+
+            else:  # コメント通知
+                title = "コメントが投稿されました"
+                if parentcommentID:
+                    text = f"あなたが投稿したコメントに {comment_username} さんがコメントしました"
+                else:
+                    text = f"あなたが投稿した「{comment_content_title}」に {comment_username} さんがコメントしました"
+                nt_type = "comment"
+
+            notification_list.append({
+                "notificationID": notificationID,
+                "timestamp": timestamp_str,
+                "title": title,
+                "text": text,
+                "commenttext": commenttext,
+                "type": nt_type,
+            })
+
+        return jsonify({"status": "success", "data": notification_list}), 200
+
+    except Exception as e:
+        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)

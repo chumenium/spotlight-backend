@@ -493,6 +493,45 @@ def get_search_contents(word):
         if conn:
             release_connection(conn)
 
+
+#通知の取得
+def get_notification(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    n.notificationID,
+                    n.notificationtimestamp,
+                    n.contentuserCID,
+                    n.contentuserUID,
+                    cuu.username AS spotlight_user_name,
+                    cuc.title AS spotlight_title,
+                    n.comCTID,
+                    n.comCMID,
+                    cmc.title AS comment_content_title,
+                    cm.commenttext,
+                    cm.parentcommentID,
+                    cmu.username AS comment_user_name
+                FROM notification n 
+                LEFT JOIN "user" cuu ON n.contentuserUID = cuu.userID
+                LEFT JOIN content cuc ON n.contentuserCID = cuc.contentID
+                LEFT JOIN content cmc ON n.comCTID = cmc.contentID
+                LEFT JOIN comment cm ON n.comCMID = cm.commentID
+                LEFT JOIN "user" cmu ON cm.userID = cmu.userID
+                WHERE n.userID = %s
+                ORDER BY n.notificationtimestamp DESC;
+            """, (uid,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")
