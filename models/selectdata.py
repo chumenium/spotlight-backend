@@ -518,12 +518,19 @@ def get_notification(uid):
                 LEFT JOIN "user" cuu ON n.contentuserUID = cuu.userID
                 LEFT JOIN content cuc ON n.contentuserCID = cuc.contentID
                 LEFT JOIN content cmc ON n.comCTID = cmc.contentID
-                LEFT JOIN comment cm ON n.comCMID = cm.commentID
+                LEFT JOIN comment cm 
+                    ON n.comCTID = cm.contentID 
+                AND n.comCMID = cm.commentID
                 LEFT JOIN "user" cmu ON cm.userID = cmu.userID
                 WHERE n.userID = %s
                 ORDER BY n.notificationtimestamp DESC;
             """, (uid,))
             rows = cur.fetchall()
+            cur.execute("""
+                UPDATE notification
+                SET isread = TRUE
+                WHERE userID = %s
+            """, (uid))
         return rows
     except psycopg2.Error as e:
         print("データベースエラー:", e)
@@ -532,6 +539,26 @@ def get_notification(uid):
         if conn:
             release_connection(conn)
 
+#未読通知数の取得
+def get_unloaded_num(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    count(*)
+                FROM notification
+                WHERE userID = %s AND isread = FALSE
+            """, (uid,))
+            row = cur.fetchone()
+        return row[0] if row else 0
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return 0
+    finally:
+        if conn:
+            release_connection(conn)
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")

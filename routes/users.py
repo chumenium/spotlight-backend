@@ -4,7 +4,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum,get_notification
+from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num
 from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -298,6 +298,21 @@ def get_notification_api():
 
         return jsonify({"status": "success", "data": notification_list}), 200
 
+    except Exception as e:
+        print("⚠️通知取得エラー:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+#未読通知数を取得する
+@users_bp.route('/unloadednum', methods=['POST'])
+@jwt_required
+def get_unloaded_num_api():
+    try:
+        uid = request.user["firebase_uid"]
+        num = get_unloaded_num(uid)
+        return jsonify({"status": "success", "num": num}), 200
     except Exception as e:
         print("⚠️通知取得エラー:", e)
         return jsonify({
