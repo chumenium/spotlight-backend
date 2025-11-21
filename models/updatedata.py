@@ -29,6 +29,7 @@ def spotlight_on(contentID, userID):
             release_connection(conn)
 
 
+from models.deletedata import delete_notification_contentuser
 #実装済み
 def spotlight_off(contentID, userID):
     """スポットライトOFF：カウント-1 & ユーザフラグFalse"""
@@ -47,6 +48,7 @@ def spotlight_off(contentID, userID):
                 WHERE contentID = %s AND userID = %s;
             """, (contentID, userID))
         conn.commit()
+        delete_notification_contentuser(contentID,userID)
         print("✅ スポットライトをOFFにしました。")
     except psycopg2.Error as e:
         print("❌ データベースエラー:", e)

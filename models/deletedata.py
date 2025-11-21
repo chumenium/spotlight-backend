@@ -215,3 +215,23 @@ def delete_content(uid, contentID):
         if conn:
             release_connection(conn)
 
+def delete_notification_contentuser(contentuserCID,contentuserUID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+
+            cur.execute("""
+                DELETE FROM notification
+                WHERE contentuserCID = %s AND contentuserUID = %s
+            """, (contentuserCID, contentuserUID))
+
+        conn.commit()
+
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
