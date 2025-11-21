@@ -271,8 +271,8 @@ def spotlight_on_route():
         spotlight_on(contentID, uid)
         #投稿元のユーザに通知を送信
         content_user_data = get_user_by_content_id(contentID)
+        spotlight_user = get_user_by_id(uid)  # if文の外で定義
         if content_user_data["notificationenabled"]:
-            spotlight_user = get_user_by_id(uid)
             title = content_user_data["title"]
             send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
             print(f"{content_user_data['username']}に通知を送信")
