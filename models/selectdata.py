@@ -235,7 +235,7 @@ def get_content_detail(contentID):
             # 詳細情報を取得
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
-                       c.playnum, c.link, u.username, u.iconimgpath, c.textflag
+                       c.playnum, c.link, u.username, u.iconimgpath, c.textflag, c.thumbnailpath
                 FROM content c
                 JOIN "user" u ON c.userID = u.userID
                 WHERE c.contentID = %s;

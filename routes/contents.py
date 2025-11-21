@@ -216,14 +216,17 @@ def content_detail():
         
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
         contentpath = normalize_content_url(detail[1])
+        thumbnailpath = normalize_content_url(detail[9]) if len(detail) > 9 and detail[9] else None
         
         print("username:",detail[6])
         print("contentpath:",contentpath)
+        print("thumbnailpath:",thumbnailpath)
         return jsonify({
             "status": "success",
             "data": {
                 "title": detail[0],
                 "contentpath": contentpath,
+                "thumbnailpath": thumbnailpath,
                 "spotlightnum": detail[2],
                 "posttimestamp": detail[3].isoformat(),
                 "playnum": detail[4],
