@@ -210,21 +210,38 @@ def content_detail():
         if contentID is None:
             from models.selectdata import get_random_content_id
             nextcontentID = get_random_content_id()
+            print(f"🎲 ランダムコンテンツID取得: {nextcontentID}")
         else:
             # 指定されたcontentIDを使用（後方互換性のため）
             nextcontentID = contentID
+            print(f"📌 指定コンテンツID: {nextcontentID}")
         
         if not nextcontentID:
+            print("⚠️ コンテンツIDが取得できませんでした")
             return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
         
         detail = get_content_detail(nextcontentID)
-        # if not detail:
-        #     return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
+        print(f"📋 コンテンツ詳細取得結果: {detail is not None}")
+        if not detail:
+            # ランダム取得の場合は再試行
+            if contentID is None:
+                from models.selectdata import get_random_content_id
+                retry_contentID = get_random_content_id()
+                if retry_contentID:
+                    detail = get_content_detail(retry_contentID)
+                    if detail:
+                        nextcontentID = retry_contentID
+                    else:
+                        return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
+                else:
+                    return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
+            else:
+                return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
 
         spotlightflag = get_user_spotlight_flag(uid,nextcontentID)
         
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
-        contentpath = normalize_content_url(detail[1])
+        contentpath = normalize_content_url(detail[1]) if detail[1] else None
         thumbnailpath = normalize_content_url(detail[9]) if len(detail) > 9 and detail[9] else None
         
         print("username:",detail[6])
