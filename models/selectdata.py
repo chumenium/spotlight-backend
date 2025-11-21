@@ -213,6 +213,46 @@ def get_content_id():
 
 #実装済み
 # 1️⃣ 指定されたコンテンツIDの情報を取得
+def get_content_by_filename(folder, filename):
+    """
+    S3のファイル名からコンテンツの詳細を取得
+    
+    Args:
+        folder: フォルダ名（"movie", "picture", "audio"）
+        filename: ファイル名
+    
+    Returns:
+        tuple: コンテンツ詳細（get_content_detailと同じ形式）
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            # contentpathにファイル名が含まれるレコードを検索
+            # CloudFront URL、S3 URL、または相対パスのいずれかに対応
+            cur.execute("""
+                SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+                       c.playnum, c.link, u.username, u.iconimgpath, c.textflag, c.thumbnailpath
+                FROM content c
+                JOIN "user" u ON c.userID = u.userID
+                WHERE c.contentpath LIKE %s
+                ORDER BY c.posttimestamp DESC
+                LIMIT 1
+            """, (f'%{filename}%',))
+            row = cur.fetchone()
+        conn.commit()
+        return row
+    except psycopg2.Error as e:
+        print("❌ データベースエラー(get_content_by_filename):", e)
+        return None
+    except Exception as e:
+        print(f"❌ エラー(get_content_by_filename): {e}")
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 def get_content_detail(contentID):
     """指定コンテンツの詳細を取得し、再生数を+1"""
     conn = None

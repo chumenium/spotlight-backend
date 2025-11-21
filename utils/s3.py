@@ -142,6 +142,80 @@ def normalize_content_url(path):
     return path
 
 
+def list_s3_content_files(folders=None):
+    """
+    S3バケット内のコンテンツファイルをリストアップ
+    
+    Args:
+        folders: 取得するフォルダのリスト（例: ["movie", "picture", "audio"]）
+                 Noneの場合はすべてのコンテンツフォルダを取得
+    
+    Returns:
+        list: ファイル情報のリスト [{"folder": "movie", "filename": "xxx.mp4"}, ...]
+    """
+    try:
+        s3 = get_s3_client()
+        bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        
+        if folders is None:
+            folders = ['movie', 'picture', 'audio']
+        
+        all_files = []
+        
+        for folder in folders:
+            try:
+                # S3バケット内のファイルをリストアップ
+                response = s3.list_objects_v2(
+                    Bucket=bucket,
+                    Prefix=f"{folder}/",
+                    Delimiter='/'
+                )
+                
+                if 'Contents' in response:
+                    for obj in response['Contents']:
+                        # フォルダ名自体は除外
+                        key = obj['Key']
+                        if key.endswith('/'):
+                            continue
+                        
+                        # ファイル名を抽出（folder/filename形式からfilenameのみ）
+                        filename = key.split('/')[-1]
+                        if filename:  # 空でない場合のみ追加
+                            all_files.append({
+                                'folder': folder,
+                                'filename': filename,
+                                'key': key
+                            })
+            except Exception as e:
+                print(f"⚠️ S3リスト取得エラー ({folder}): {e}")
+                continue
+        
+        return all_files
+    
+    except Exception as e:
+        print(f"⚠️ S3リスト取得エラー: {e}")
+        return []
+
+
+def get_random_s3_content():
+    """
+    S3バケット内からランダムなコンテンツファイルを取得
+    
+    Returns:
+        dict: ランダムに選択されたファイル情報 {"folder": "movie", "filename": "xxx.mp4", "key": "movie/xxx.mp4"}
+              Noneの場合はコンテンツが見つからない
+    """
+    import random
+    
+    files = list_s3_content_files()
+    
+    if not files:
+        return None
+    
+    # ランダムに1件選択
+    return random.choice(files)
+
+
 def get_content_type_from_extension(content_type, extension):
     """
     拡張子からContent-Typeを決定
