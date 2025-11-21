@@ -203,11 +203,20 @@ def add_comment():
 def content_detail():
     try:
         uid = request.user["firebase_uid"]
-        data = request.get_json()
+        data = request.get_json() or {}
         contentID = data.get("contentID")
-        nextcontentID = get_play_content_id(contentID)
+        
+        # contentIDが指定されていない場合はランダムなコンテンツを取得
+        if contentID is None:
+            from models.selectdata import get_random_content_id
+            nextcontentID = get_random_content_id()
+        else:
+            # 指定されたcontentIDを使用（後方互換性のため）
+            nextcontentID = contentID
+        
         if not nextcontentID:
             return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
+        
         detail = get_content_detail(nextcontentID)
         # if not detail:
         #     return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404

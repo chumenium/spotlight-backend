@@ -155,55 +155,43 @@ def get_user_spotlightnum(userID):
             release_connection(conn)
 
 #実装済み
-def get_play_content_id(contentID):
+def get_random_content_id():
+    """
+    S3にアップロードされているランダムなコンテンツIDを取得
+    textflagがFALSE（テキスト投稿以外）のコンテンツからランダムに選択
+    """
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            if contentID:
-                # ① 指定された contentID の投稿時間を取得
-                cur.execute(
-                    "SELECT posttimestamp FROM content WHERE contentID = %s",
-                    (contentID,)
-                )
-                row = cur.fetchone()
-                if not row:
-                    return None
-                
-                post_time = row[0]
-
-                # ② その時間より後に投稿された最初のコンテンツを取得
-                cur.execute(
-                    """
-                    SELECT contentID 
-                    FROM content
-                    WHERE posttimestamp < %s
-                    ORDER BY posttimestamp DESC
-                    LIMIT 1
-                    """,
-                    (post_time,)
-                )
-                next_row = cur.fetchone()
-            else:
-                # contentID が無い場合 → 最新投稿の contentID を取得
-                cur.execute(
-                    """
-                    SELECT contentID
-                    FROM content
-                    ORDER BY posttimestamp DESC
-                    LIMIT 1
-                    """
-                )
-                next_row = cur.fetchone()
-        if next_row:
-            return next_row[0]
+            # textflagがFALSE（テキスト投稿以外）のコンテンツからランダムに1件取得
+            cur.execute(
+                """
+                SELECT contentID
+                FROM content
+                WHERE textflag = FALSE OR textflag IS NULL
+                ORDER BY RANDOM()
+                LIMIT 1
+                """
+            )
+            row = cur.fetchone()
+        if row:
+            return row[0]
         return None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        print("データベースエラー(get_random_content_id):", e)
         return None
     finally:
         if conn:
             release_connection(conn)
+
+
+def get_play_content_id(contentID):
+    """
+    後方互換性のため残す（ランダム取得に変更したため、この関数は使用されない）
+    """
+    # ランダムなコンテンツを取得
+    return get_random_content_id()
 
 
 #------------------------------ここから要テスト------------------------------
