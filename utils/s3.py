@@ -109,6 +109,39 @@ def get_cloudfront_url(folder, filename):
         return f"https://{bucket}.s3.{region}.amazonaws.com/{folder}/{safe_filename}"
 
 
+def normalize_content_url(path):
+    """
+    DBから取得したパスをCloudFront URLに正規化
+    
+    Args:
+        path: DBから取得したパス（相対パスまたはCloudFront URL）
+    
+    Returns:
+        str: CloudFront URL（既に絶対URLの場合はそのまま返す）
+    """
+    if not path or not isinstance(path, str):
+        return path or ''
+    
+    path = path.strip()
+    
+    # 既に絶対URL（CloudFront URLまたはS3 URL）の場合はそのまま返す
+    if path.startswith('http://') or path.startswith('https://'):
+        return path
+    
+    # 相対パスの場合、CloudFront URLに変換
+    # 例: /content/movie/filename.mp4 -> https://d30se1secd7t6t.cloudfront.net/movie/filename.mp4
+    if path.startswith('/content/'):
+        # /content/movie/filename.mp4 -> movie/filename.mp4
+        path_parts = path.replace('/content/', '').split('/', 1)
+        if len(path_parts) == 2:
+            folder = path_parts[0]  # movie, picture, audio, thumbnail
+            filename = path_parts[1]
+            return get_cloudfront_url(folder, filename)
+    
+    # その他の形式の場合はそのまま返す（テキスト投稿など）
+    return path
+
+
 def get_content_type_from_extension(content_type, extension):
     """
     拡張子からContent-Typeを決定

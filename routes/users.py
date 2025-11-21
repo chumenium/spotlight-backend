@@ -99,6 +99,7 @@ def get_user_contents_list():
         rows = get_user_contents(uid)
 
         # Dartで扱いやすいようにdictに変換
+        from utils.s3 import normalize_content_url
         contents = [
             {
                 "contentID": row[0],
@@ -107,7 +108,7 @@ def get_user_contents_list():
                 "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailpath": row[6],
+                "thumbnailpath": normalize_content_url(row[6]) if len(row) > 6 and row[6] else None,
             }
             for row in rows
         ]
@@ -130,6 +131,7 @@ def get_spotlight_contents_list():
         uid = request.user["firebase_uid"]
         rows = get_spotlight_contents(uid)
 
+        from utils.s3 import normalize_content_url
         contents = [
             {
                 "contentID": row[0],
@@ -138,7 +140,7 @@ def get_spotlight_contents_list():
                 "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailpath": row[6],
+                "thumbnailpath": normalize_content_url(row[6]) if len(row) > 6 and row[6] else None,
             }
             for row in rows
         ]

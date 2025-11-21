@@ -19,7 +19,7 @@ import base64
 import os
 from datetime import datetime
 from flask import current_app
-from utils.s3 import upload_to_s3, get_cloudfront_url, get_content_type_from_extension
+from utils.s3 import upload_to_s3, get_cloudfront_url, get_content_type_from_extension, normalize_content_url
 
 
 content_bp = Blueprint('content', __name__, url_prefix='/api/content')
@@ -214,13 +214,16 @@ def content_detail():
 
         spotlightflag = get_user_spotlight_flag(uid,nextcontentID)
         
+        # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
+        contentpath = normalize_content_url(detail[1])
+        
         print("username:",detail[6])
-        print("contentpath:",detail[1])
+        print("contentpath:",contentpath)
         return jsonify({
             "status": "success",
             "data": {
                 "title": detail[0],
-                "contentpath": detail[1],
+                "contentpath": contentpath,
                 "spotlightnum": detail[2],
                 "posttimestamp": detail[3].isoformat(),
                 "playnum": detail[4],
@@ -410,7 +413,7 @@ def get_playlistdetail():
                 "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailpath": row[6],
+                "thumbnailpath": normalize_content_url(row[6]) if len(row) > 6 and row[6] else None,
             }
             for row in rows
         ]
@@ -441,6 +444,8 @@ def serch():
         # Dartで扱いやすいように整形
         result = []
         for row in rows:
+            # DBから取得したパスをCloudFront URLに正規化
+            thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
             result.append({
                 "contentID": row[0],
                 "title": row[1],
@@ -448,7 +453,7 @@ def serch():
                 "posttimestamp": row[3],
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailurl": row[6]
+                "thumbnailurl": thumbnailurl
             })
 
         return jsonify({
