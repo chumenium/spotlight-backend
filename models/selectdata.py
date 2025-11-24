@@ -498,21 +498,54 @@ def get_search_contents(word):
     conn = None
     try:
         conn = get_connection()
+
+        # 空白で split（複数スペースもOK）
+        words = [w.strip() for w in word.split() if w.strip()]
+        if not words:
+            return []
+
+        # LIKE 条件を動的生成
+        like_clauses = []
+        params = []
+
+        for w in words:
+            like_clauses.append("COALESCE(c.title,'') ILIKE %s")
+            like_clauses.append("COALESCE(c.tag,'') ILIKE %s")
+            params.append(f"%{w}%")
+            params.append(f"%{w}%")
+
+        # スコア算出：一致したワード数（title + tag）
+        score_cases = []
+        for w in words:
+            score_cases.append("CASE WHEN COALESCE(c.title,'') ILIKE %s THEN 1 ELSE 0 END")
+            score_cases.append("CASE WHEN COALESCE(c.tag,'') ILIKE %s THEN 1 ELSE 0 END")
+            params.append(f"%{w}%")
+            params.append(f"%{w}%")
+
+        where_sql = " OR ".join(like_clauses)
+        score_sql = " + ".join(score_cases)
+
+        sql = f"""
+            SELECT 
+                c.contentID, 
+                c.title, 
+                c.spotlightnum, 
+                c.posttimestamp, 
+                c.playnum, 
+                c.link, 
+                c.thumbnailpath,
+                ({score_sql}) AS score
+            FROM contentuser cu
+            JOIN content c ON cu.contentID = c.contentID
+            WHERE {where_sql}
+            ORDER BY score DESC, c.posttimestamp DESC
+        """
+
+        conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute("""
-                SELECT 
-                    c.contentID, 
-                    c.title, 
-                    c.spotlightnum, 
-                    c.posttimestamp, 
-                    c.playnum, 
-                    c.link, 
-                    c.thumbnailpath
-                FROM contentuser cu
-                JOIN content c ON cu.contentID = c.contentID
-                WHERE c.title ILIKE %s
-            """, (f"%{word}%",))  # ← 部分一致検索（大文字小文字区別なし）
+            cur.execute(sql, params)
             rows = cur.fetchall()
+
         return rows
     except psycopg2.Error as e:
         print("データベースエラー:", e)
@@ -520,6 +553,33 @@ def get_search_contents(word):
     finally:
         if conn:
             release_connection(conn)
+
+# def get_search_contents(word):
+#     conn = None
+#     try:
+#         conn = get_connection()
+#         with conn.cursor() as cur:
+#             cur.execute("""
+#                 SELECT 
+#                     c.contentID, 
+#                     c.title, 
+#                     c.spotlightnum, 
+#                     c.posttimestamp, 
+#                     c.playnum, 
+#                     c.link, 
+#                     c.thumbnailpath
+#                 FROM contentuser cu
+#                 JOIN content c ON cu.contentID = c.contentID
+#                 WHERE c.title LIKE %s OR c.tag LIKE %s
+#             """, (f"%{word}%",f"%{word}%",))  # ← 部分一致検索（大文字小文字区別なし）
+#             rows = cur.fetchall()
+#         return rows
+#     except psycopg2.Error as e:
+#         print("データベースエラー:", e)
+#         return []
+#     finally:
+#         if conn:
+#             release_connection(conn)
 
 
 #通知の取得

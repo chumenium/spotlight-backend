@@ -198,3 +198,6 @@ ALTER TABLE notification
 ADD COLUMN notificationtext TEXT;
 ALTER TABLE notification
 ADD COLUMN notificationtitle TEXT;
+
+ALTER TABLE content
+ADD COLUMN tag TEXT;
