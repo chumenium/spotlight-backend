@@ -33,7 +33,7 @@ def clean_base64(b64_string):
 import subprocess
 import tempfile
 
-MAX_BITRATE = 7000 * 1000  # 7000kbps = 7,000,000 bps
+MAX_BITRATE = 6000 * 1000  # 7000kbps = 7,000,000 bps
 
 def get_video_bitrate(file_path):
     """ffprobeで動画ビットレートを取得"""
@@ -154,8 +154,8 @@ def add_content():
             thumb_binary = base64.b64decode(thumb_data)
             
             # ★★ 動画の場合はビットレートチェック & 圧縮する
-            if content_type == "video":
-                content_binary = compress_video_if_needed(content_binary)
+            # if content_type == "video":
+            #     content_binary = compress_video_if_needed(content_binary)
 
             # --- S3にアップロード ---
             content_folder = subdirs[content_type]
