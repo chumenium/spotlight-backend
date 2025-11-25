@@ -516,7 +516,7 @@ def add_content_in_playlist():
         uid = request.user["firebase_uid"]
         data = request.get_json()
         playlistid = data.get("playlistid")
-        contentid = data.get("playlistid")
+        contentid = data.get("contentID")
         insert_playlist_detail(uid, playlistid, contentid)
         return jsonify({"status": "success", "message": "プレイリストにコンテンツを追加しました"}), 200
     except Exception as e:
