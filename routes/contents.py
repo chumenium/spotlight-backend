@@ -85,14 +85,16 @@ def compress_video_if_needed(file_binary, max_bitrate=MAX_BITRATE):
         # 変換後ファイルを読み込み
         with open(output_path, "rb") as f:
             new_binary = f.read()
-
+        print("7000kbpsに変換成功")
         # 一時ファイル削除
         os.remove(input_path)
         os.remove(output_path)
+        print("一時ファイル削除")
 
         return new_binary  # 変換後バイナリを返す
 
     # 変換不要なら元のバイナリ返す
+    print("ビットレートに問題無し(元のファイルを返す)")
     os.remove(input_path)
     return file_binary
 
