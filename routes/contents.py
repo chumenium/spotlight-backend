@@ -29,6 +29,74 @@ def clean_base64(b64_string):
         b64_string = b64_string.split(",")[1]
     return b64_string
 
+
+import subprocess
+import tempfile
+
+MAX_BITRATE = 7000 * 1000  # 7000kbps = 7,000,000 bps
+
+def get_video_bitrate(file_path):
+    """ffprobeで動画ビットレートを取得"""
+    try:
+        result = subprocess.run(
+            [
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=bit_rate",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                file_path
+            ],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        bitrate = int(result.stdout.strip())
+        return bitrate
+    except:
+        return None
+
+
+def compress_video_if_needed(file_binary, max_bitrate=MAX_BITRATE):
+    """ビットレートが高い場合は7000kbpsに再エンコード"""
+    # 一時ファイル作成
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as tmp_in:
+        tmp_in.write(file_binary)
+        input_path = tmp_in.name
+
+    output_path = input_path + "_compressed.mp4"
+
+    # 現在のビットレート取得
+    bitrate = get_video_bitrate(input_path)
+    print(f"🔍 現在のビットレート: {bitrate}")
+
+    if bitrate and bitrate > max_bitrate:
+        print("⚠️ ビットレートが高すぎます → 再エンコード実行")
+
+        # ffmpegで7000kbpsに変換
+        cmd = [
+            "ffmpeg", "-i", input_path,
+            "-b:v", f"{max_bitrate}",
+            "-bufsize", f"{max_bitrate}",
+            "-maxrate", f"{max_bitrate}",
+            "-preset", "medium",
+            output_path
+        ]
+        subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        # 変換後ファイルを読み込み
+        with open(output_path, "rb") as f:
+            new_binary = f.read()
+
+        # 一時ファイル削除
+        os.remove(input_path)
+        os.remove(output_path)
+
+        return new_binary  # 変換後バイナリを返す
+
+    # 変換不要なら元のバイナリ返す
+    os.remove(input_path)
+    return file_binary
+
+
 # ===============================
 # 1️⃣ コンテンツ追加（動画・画像・音声に対応）
 # ===============================
@@ -45,6 +113,7 @@ def add_content():
         content_type = data.get("type")      # "video" | "image" | "audio" | "text"
         title = data.get("title")
         link = data.get("link")
+        tag = data.get("tag")
 
         if content_type != "text":
 
@@ -81,6 +150,10 @@ def add_content():
             # --- Base64 → バイナリ変換 ---
             content_binary = base64.b64decode(file_data)
             thumb_binary = base64.b64decode(thumb_data)
+            
+            # ★★ 動画の場合はビットレートチェック & 圧縮する
+            if content_type == "video":
+                content_binary = compress_video_if_needed(content_binary)
 
             # --- S3にアップロード ---
             content_folder = subdirs[content_type]
@@ -112,7 +185,8 @@ def add_content():
                 thumbnailpath=thumb_url,
                 link=link,
                 title=title,
-                userID=uid
+                userID=uid,
+                tag=tag
             )
         else:
             text = data.get("text") 
@@ -122,7 +196,8 @@ def add_content():
                 link=link,
                 title=title,
                 userID=uid,
-                textflag="TRUE"
+                textflag="TRUE",
+                tag=tag
             )
 
         if content_type != "text":
