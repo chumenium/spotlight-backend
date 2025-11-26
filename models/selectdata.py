@@ -626,6 +626,7 @@ def get_notification(uid):
                 SET isread = TRUE
                 WHERE userID = %s
             """, (uid,))
+            conn.commit()
         return rows
     except psycopg2.Error as e:
         print("データベースエラー:", e)
