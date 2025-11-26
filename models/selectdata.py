@@ -625,7 +625,7 @@ def get_notification(uid):
                 UPDATE notification
                 SET isread = TRUE
                 WHERE userID = %s
-            """, (uid))
+            """, (uid,))
         return rows
     except psycopg2.Error as e:
         print("データベースエラー:", e)
