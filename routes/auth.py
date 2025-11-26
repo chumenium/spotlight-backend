@@ -30,11 +30,10 @@ else:
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
 
 # ====== Firebase認証 → DB登録 → JWT発行 ======
-@auth_bp.route("/firebase", methods=["POST"])
-def firebase_auth():
-    data = request.get_json()
-    id_token_str = data.get("id_token")
-    
+def handle_firebase_auth():
+    """Firebase認証の共通処理（Google/Apple/Twitter すべてOK）"""
+    data = request.get_json() or {}
+    id_token_str = data.get("id_token")or data.get("idToken")
 
     if not id_token_str:
         return jsonify({"error": "id_token is required"}), 400
@@ -63,13 +62,25 @@ def firebase_auth():
         })
 
     except Exception as e:
-        print("🔥 Firebase認証エラー:", e)  # ← ここ追加！
+        print("🔥 Firebase認証エラー:", e)
         return jsonify({"error": str(e)}), 400
+
+
+@auth_bp.route("/firebase", methods=["POST"])
+def firebase_auth():
+    """Firebase認証エンドポイント"""
+    return handle_firebase_auth()
+
+
+@auth_bp.route("/google", methods=["POST"])
+def google_auth():
+    """Google認証エンドポイント（Firebase認証を使用）"""
+    return handle_firebase_auth()
 
 
 
 # ====== 通知トークン更新 ======
-@auth_bp.route("/api/update_token", methods=["POST"])
+@auth_bp.route("/update_token", methods=["POST"])
 @jwt_required
 def update_token():
     data = request.get_json()
