@@ -333,10 +333,11 @@ def get_search_history(userID):
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT serchword 
-                FROM serchhistory 
+                SELECT DISTINCT ON (serchword)
+                    serchword
+                FROM serchhistory
                 WHERE userID = %s
-                ORDER BY serchID DESC
+                ORDER BY serchword, serchID DESC;
             """, (userID,))
             rows = cur.fetchall()
         return [r[0] for r in rows]
@@ -625,7 +626,8 @@ def get_notification(uid):
                 UPDATE notification
                 SET isread = TRUE
                 WHERE userID = %s
-            """, (uid))
+            """, (uid,))
+            conn.commit()
         return rows
     except psycopg2.Error as e:
         print("データベースエラー:", e)
