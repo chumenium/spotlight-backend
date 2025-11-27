@@ -19,5 +19,6 @@ def send_push_notification(token: str, title: str, body: str, data: dict = None)
         return response
 
     except Exception as e:
-        print(f"❌ 通知送信できてる！！！！！！！！Failed to send push notification: {e}")
+        print(f"❌ 通知送信失敗！！！！！！！！Failed to send push notification: {e}")
+        print("Token received:", repr(token))
         return None
