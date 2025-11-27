@@ -5,7 +5,7 @@ from models.deletedata import (
 )
 from flask import Blueprint, request, jsonify
 
-delete_bp = Blueprint('content', __name__, url_prefix='/api/delete')
+delete_bp = Blueprint('delete_bp', __name__, url_prefix='/api/delete')
 
 
 # 共通レスポンス関数
