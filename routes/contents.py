@@ -430,6 +430,8 @@ def spotlight_on_route():
             title = content_user_data["title"]
             send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
             print(f"{content_user_data['username']}に通知を送信")
+        title = content_user_data["title"]
+        send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
         insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
