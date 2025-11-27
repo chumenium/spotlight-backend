@@ -271,7 +271,7 @@ def add_comment():
                 title = content_user_data["title"]
                 send_push_notification(content_user_data["token"], "コメントが投稿されました",title+"に"+post_username+"さんがコメントを投稿しました")
                 print(f"{content_user_data['username']}に通知を送信")
-            insert_notification(userID=content_user_data,comCTID=contentID,comCMID=commentid)
+            insert_notification(userID=content_user_data['userID'],comCTID=contentID,comCMID=commentid)
 
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
