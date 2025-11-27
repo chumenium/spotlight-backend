@@ -30,7 +30,7 @@ def get_s3_client():
     )
 
 
-def upload_to_s3(file_data, folder, filename, content_type='application/octet-stream'):
+def upload_to_s3(file_data, folder, filename, content_type='application/octet-stream', bucket_name=None):
     """
     S3にファイルをアップロード
     
@@ -39,13 +39,17 @@ def upload_to_s3(file_data, folder, filename, content_type='application/octet-st
         folder: S3内のフォルダパス（例: "movie", "picture", "audio", "thumbnail"）
         filename: ファイル名
         content_type: MIMEタイプ
+        bucket_name: バケット名（指定しない場合は設定から取得）
     
     Returns:
         str: アップロードされたファイルのキー（パス）
     """
     try:
         s3 = get_s3_client()
-        bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        if bucket_name is None:
+            bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        else:
+            bucket = bucket_name
         
         # セキュアなファイル名に変換
         safe_filename = secure_filename(filename)
