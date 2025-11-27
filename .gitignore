@@ -47,3 +47,7 @@ dist/
 firebase-adminsdk-*.json
 *-firebase-adminsdk-*.json
 service-account-*.json
+.env
+content/movie/
+.env
+content/movie/
