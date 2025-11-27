@@ -1,6 +1,23 @@
 import psycopg2
 from models.connection_pool import get_connection, release_connection
 
+
+def update_FMCtoken(new_token, uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('UPDATE "user" SET token = %s WHERE userID = %s', (new_token, uid))
+        conn.commit()
+        print("✅ tokenをアップデートしました。")
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
+
 #実装済み
 def spotlight_on(contentID, userID):
     """スポットライトON：カウント+1 & ユーザフラグTrue"""

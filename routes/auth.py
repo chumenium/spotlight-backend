@@ -4,7 +4,8 @@
 """
 from flask import Blueprint, request, jsonify
 from models.create_username import register_username
-from models.selectdata import update_FMCtoken, user_exists
+from models.selectdata import user_exists
+from models.updatedata import update_FMCtoken
 #from utils.auth import generate_jwt_token, verify_google_token
 import jwt
 import datetime

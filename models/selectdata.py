@@ -1,21 +1,6 @@
 import psycopg2
 import os
 from models.connection_pool import get_connection, release_connection
-def update_FMCtoken(new_token, uid):
-    conn = None
-    try:
-        conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute('UPDATE "user" SET token = %s WHERE userID = %s', (new_token, uid))
-        conn.commit()
-        print("✅ tokenをアップデートしました。")
-    except psycopg2.Error as e:
-        if conn:
-            conn.rollback()
-        print("データベースエラー:", e)
-    finally:
-        if conn:
-            release_connection(conn)
 
 
 def get_user_by_id(userID):
