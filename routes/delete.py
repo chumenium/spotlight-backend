@@ -5,7 +5,7 @@ from models.deletedata import (
 )
 from flask import Blueprint, request, jsonify
 
-content_bp = Blueprint('content', __name__, url_prefix='/api/delete')
+delete_bp = Blueprint('content', __name__, url_prefix='/api/delete')
 
 
 # 共通レスポンス関数
@@ -19,7 +19,7 @@ def error(message):
 # ===========================================
 # 1. 視聴履歴削除
 # ===========================================
-@content_bp.route("/playhistory", methods=["POST"])
+@delete_bp.route("/playhistory", methods=["POST"])
 @jwt_required
 def delete_play_history_api():
     try:
@@ -43,7 +43,7 @@ def delete_play_history_api():
 # ===========================================
 # 2. プレイリストの中身から削除
 # ===========================================
-@content_bp.route("/playlistdetail", methods=["POST"])
+@delete_bp.route("/playlistdetail", methods=["POST"])
 @jwt_required
 def delete_playlist_detail_api():
     try:
@@ -69,7 +69,7 @@ def delete_playlist_detail_api():
 # ===========================================
 # 3. プレイリスト削除
 # ===========================================
-@content_bp.route("/playlist", methods=["POST"])
+@delete_bp.route("/playlist", methods=["POST"])
 @jwt_required
 def delete_playlist_api():
     try:
@@ -94,7 +94,7 @@ def delete_playlist_api():
 # ===========================================
 # 4. 検索履歴削除
 # ===========================================
-@content_bp.route("/searchhistory", methods=["POST"])
+@delete_bp.route("/searchhistory", methods=["POST"])
 @jwt_required
 def delete_search_history_api():
     try:
@@ -119,7 +119,7 @@ def delete_search_history_api():
 # ===========================================
 # 5. 通知削除
 # ===========================================
-@content_bp.route("/notification", methods=["POST"])
+@delete_bp.route("/notification", methods=["POST"])
 @jwt_required
 def delete_notification_api():
     try:
@@ -144,7 +144,7 @@ def delete_notification_api():
 # ===========================================
 # 6. コメント削除
 # ===========================================
-@content_bp.route("/comment", methods=["POST"])
+@delete_bp.route("/comment", methods=["POST"])
 @jwt_required
 def delete_comment_api():
     try:
@@ -169,7 +169,7 @@ def delete_comment_api():
 # ===========================================
 # 7. コンテンツ削除
 # ===========================================
-@content_bp.route("/content", methods=["POST"])
+@delete_bp.route("/content", methods=["POST"])
 @jwt_required
 def delete_content_api():
     try:
