@@ -7,7 +7,7 @@ from models.updatedata import spotlight_on, spotlight_off,add_playnum
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
     get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
-    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id
+    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num
 )
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -363,6 +363,7 @@ def content_detail():
         print("username:",detail[6])
         print("contentpath:",contentpath)
         print("thumbnailpath:",thumbnailpath)
+        commentnum = get_comment_num(nextcontentID)
         return jsonify({
             "status": "success",
             "data": {
@@ -377,7 +378,8 @@ def content_detail():
                 "iconimgpath": detail[7],
                 "spotlightflag": spotlightflag,
                 "textflag":detail[8],
-                "nextcontentid": nextcontentID
+                "nextcontentid": nextcontentID,
+                "commentnum":commentnum
             }
         }), 200
     except Exception as e:

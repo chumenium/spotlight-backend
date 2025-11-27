@@ -656,6 +656,27 @@ def get_unloaded_num(uid):
     finally:
         if conn:
             release_connection(conn)
+
+#コメント数の取得
+def get_comment_num(contentid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    count(*)
+                FROM comment
+                WHERE contentid = %s
+            """, (contentid,))
+            row = cur.fetchone()
+        return row[0] if row else 0
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return 0
+    finally:
+        if conn:
+            release_connection(conn)
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")
