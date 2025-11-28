@@ -160,3 +160,43 @@ def insert_notification(userID, contentuserCID=None, contentuserUID=None, comCTI
             release_connection(conn)
 
 
+
+
+# ---------------- 通報履歴を追加 ----------------
+def insert_report(
+    reporttype,
+    reportuidID,
+    targetuidID,
+    contentID=None,
+    comCTID=None,
+    comCMID=None,
+    reason=None,
+    detail=None
+):
+    """reports テーブルに通報データを登録する"""
+
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            INSERT INTO reports (reporttype, reportuidID, targetuidID, contentID, comCTID, comCMID, reason, detail)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
+        """, (
+            reporttype,
+            reportuidID,
+            targetuidID,
+            contentID,
+            comCTID,
+            comCMID,
+            reason,
+            detail
+        ))
+        conn.commit()
+        print("✅ 通報データを追加しました。")
+
+    except psycopg2.Error as e:
+        print("❌ データベースエラー:", e)
+
+    finally:
+        if conn:
+            release_connection(conn)

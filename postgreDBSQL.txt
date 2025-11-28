@@ -201,3 +201,38 @@ ADD COLUMN notificationtitle TEXT;
 
 ALTER TABLE content
 ADD COLUMN tag TEXT;
+
+
+CREATE TABLE reports (
+    reportID SERIAL PRIMARY KEY,
+    reporttype VARCHAR(32) NOT NULL CHECK (reporttype IN ('user', 'content', 'comment')),
+    reportuidID VARCHAR(512) NOT NULL,
+    targetuidID VARCHAR(512),
+    contentID INTEGER,
+    comCTID INTEGER,
+    comCMID INTEGER,
+    reason VARCHAR(512),
+    detail TEXT,
+    reporttimestamp TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (reportuidID) REFERENCES "user"(userID),
+    FOREIGN KEY (targetuidID) REFERENCES "user"(userID),
+    FOREIGN KEY (contentID) REFERENCES content(contentID),
+    FOREIGN KEY (comCTID, comCMID)
+        REFERENCES comment(contentID, commentID),
+    CHECK (
+        (contentID IS NOT NULL AND comCMID IS NULL)
+        OR
+        (contentID IS NULL AND comCMID IS NOT NULL)
+    )
+);
+
+
+CREATE TABLE blocklist (
+    blockID SERIAL PRIMARY KEY,
+    userID VARCHAR(512) NOT NULL,
+    blockedUserID VARCHAR(512) NOT NULL,
+    blocktimestamp TIMESTAMP DEFAULT NOW(),
+    FOREIGN KEY (userID) REFERENCES "user"(userID),
+    FOREIGN KEY (blockedUserID) REFERENCES "user"(userID),
+    UNIQUE (userID, blockedUserID)
+);
