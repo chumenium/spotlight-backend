@@ -8,7 +8,7 @@ from models.selectdata import get_user_name_iconpath,get_search_history,get_user
 from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
-    insert_search_history, insert_play_history, insert_notification
+    insert_search_history, insert_play_history, insert_notification, insert_report
 )
 import os
 import re
@@ -347,6 +347,38 @@ def get_unloaded_num_api():
         return jsonify({"status": "success", "num": num}), 200
     except Exception as e:
         print("⚠️通知取得エラー:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+@users_bp.route('/report', methods=['POST'])
+@jwt_required
+def send_report_api():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        rtype = data.get("type")
+        reason = data.get("reason")
+        detail = data.get("detail")
+        if rtype == "user":
+            targetuid = data.get("uid")
+            insert_report(reporttype=rtype, reportuidID=uid, targetuidID=targetuid, reason=reason, detail=detail)
+        elif rtype == "content":
+            contentid1 = data.get("contentID")
+            insert_report(reporttype=rtype, reportuidID=uid, contentID=contentid1, reason=reason, detail=detail)
+        elif rtype == "comment":
+            contentid2 = data.get("contentID")
+            commentid = data.get("commentID")
+            insert_report(reporttype=rtype, reportuidID=uid, comCTID=contentid2, comCMID=commentid, reason=reason, detail=detail)
+        else:
+            print("⚠️不適切なtypeです:")
+            return jsonify({
+                "status": "error",
+                "message": str("inappropriate report type")
+        }), 400
+    except Exception as e:
+        print("⚠️通報送信エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
