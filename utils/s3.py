@@ -278,10 +278,10 @@ def delete_from_s3(key, bucket_name=None):
         s3 = get_s3_client()
 
         # バケット名取得
-        if bucket_name is None:
-            bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
-        else:
-            bucket = bucket_name
+        # if bucket_name is None:
+        #     bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        # else:
+        bucket = bucket_name
 
         # 削除処理
         response = s3.delete_object(
@@ -306,6 +306,7 @@ def extract_s3_key_from_url(url):
     """
     try:
         path = urlparse(url).path  # /icon/a.png
+        print(path)
         return path.lstrip('/')    # icon/a.png へ変換
     except Exception:
         return None
@@ -315,5 +316,5 @@ def delete_file_from_url(url, bucket_name=None):
     if not key:
         print("キーの抽出に失敗しました")
         return False
-
+    print(key)
     return delete_from_s3(key, bucket_name=bucket_name)
