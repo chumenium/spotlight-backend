@@ -213,6 +213,7 @@ def change_icon():
         username = data.get("username")
         file = data.get("iconimg")
         username1, url = get_user_name_iconpath(uid)
+        print(url,"このURL削除する！！！！！！！！")
         success = delete_file_from_url(url)
         if file:
             if file.startswith("data:image"):

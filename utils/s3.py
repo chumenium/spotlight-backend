@@ -263,58 +263,66 @@ def get_content_type_from_extension(content_type, extension):
 
 
 
-def delete_from_s3(key, bucket_name=None):
-    """
-    S3にアップロードされたファイルを削除する
-
-    Args:
-        key: S3内のファイルパス（例: "movie/test.mp4"）
-        bucket_name: バケット名（指定しない場合は設定から取得）
-
-    Returns:
-        bool: True（削除成功） / False（ファイルなし、または失敗）
-    """
-    try:
-        s3 = get_s3_client()
-
-        # バケット名取得
-        # if bucket_name is None:
-        #     bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
-        # else:
-        bucket = bucket_name
-
-        # 削除処理
-        response = s3.delete_object(
-            Bucket=bucket,
-            Key=key
-        )
-
-        # 削除成功か判定（S3は存在しないキーでも成功扱いになる）  
-        return True
-    
-    except Exception as e:
-        print(f"⚠️ S3削除エラー: {e}")
-        return False
-
-
 from urllib.parse import urlparse
+from flask import current_app
 
 def extract_s3_key_from_url(url):
     """
-    CloudFront/S3 の URL から key を抽出する
-    例: https://xxx.cloudfront.net/icon/a.png → icon/a.png
+    CloudFront/S3 の URL から S3 の key（フォルダ/ファイル名）を抽出。
+    例:
+      https://xxx.cloudfront.net/icon/a.png → icon/a.png
     """
+    if not url:
+        return None
+
     try:
-        path = urlparse(url).path  # /icon/a.png
-        print(path)
-        return path.lstrip('/')    # icon/a.png へ変換
+        path = urlparse(url).path  # "/icon/a.png"
+        key = path.lstrip("/")      # "icon/a.png"
+        return key
     except Exception:
         return None
 
-def delete_file_from_url(url, bucket_name=None):
+
+def delete_from_s3(key, bucket_name=None):
+    """
+    S3 からオブジェクトを削除（key と bucket を指定）。
+    bucket が None の場合はデフォルトバケットを使う。
+    """
+    try:
+        s3 = boto3.client("s3")
+
+        if bucket_name is None:
+            bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        else:
+            bucket = bucket_name
+
+        s3.delete_object(Bucket=bucket, Key=key)
+
+        print(f"🗑️ S3削除成功: bucket={bucket}, key={key}")
+        return True
+
+    except Exception as e:
+        print(f"❌ S3削除エラー: {e} (bucket={bucket_name}, key={key})")
+        return False
+
+
+def delete_file_from_url(url):
+    """
+    CloudFront URL を元に S3 のファイルを削除する統合関数。
+    ・URLからkeyを抽出
+    ・コンテンツ種別を判別（movie は別バケット）
+    """
     key = extract_s3_key_from_url(url)
     if not key:
-        print("キーの抽出に失敗しました")
+        print("⚠️ URL から S3 key を抽出できませんでした")
         return False
-    print(key)
-    return delete_from_s3(key, bucket_name=bucket_name)
+
+    # --- バケット判定 ---
+    # movie = spotlight-input
+    # その他 = spotlight-contents
+    if key.startswith("movie/"):
+        bucket = "spotlight-input"
+    else:
+        bucket = None  # デフォルトバケット（spotlight-contents）
+
+    return delete_from_s3(key, bucket_name=bucket)
