@@ -219,9 +219,9 @@ def change_icon():
             
             # Base64 → バイナリ変換
             icon_binary = base64.b64decode(file)
-            
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
             # ファイル名生成（username_icon.png形式で、既存ファイルを上書き）
-            filename = f"{username}_icon.png"
+            filename = f"{username}_{timestamp}_icon.png"
             
             # ===== S3にアップロード（既存ファイルがある場合は上書き） =====
             upload_to_s3(
