@@ -10,7 +10,7 @@ from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification, insert_report
 )
-from utils.s3 import upload_to_s3, get_cloudfront_url
+from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url
 import os
 import re
 import base64
@@ -212,7 +212,8 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
-        
+        username1, url = get_user_name_iconpath(uid)
+        success = delete_file_from_url(url)
         if file:
             if file.startswith("data:image"):
                 file = file.split(",")[1]
