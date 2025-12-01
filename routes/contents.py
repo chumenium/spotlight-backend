@@ -375,6 +375,10 @@ def content_detail():
         print("contentpath:",contentpath)
         print("thumbnailpath:",thumbnailpath)
         commentnum = get_comment_num(nextcontentID)
+        
+        # アイコンパスをCloudFront URLに正規化
+        iconimgpath = normalize_content_url(detail[7]) if len(detail) > 7 and detail[7] else None
+        
         return jsonify({
             "status": "success",
             "data": {
@@ -386,7 +390,7 @@ def content_detail():
                 "playnum": detail[4],
                 "link": detail[5],
                 "username": detail[6],
-                "iconimgpath": detail[7],
+                "iconimgpath": iconimgpath,
                 "spotlightflag": spotlightflag,
                 "textflag":detail[8],
                 "nextcontentid": nextcontentID,
@@ -480,7 +484,7 @@ def get_comments():
             {
                 "commentID": row[0],
                 "username": row[1],
-                "iconimgpath": row[2],
+                "iconimgpath": normalize_content_url(row[2]) if len(row) > 2 and row[2] else None,
                 "commenttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
                 "commenttext": row[4],
                 "parentcommentID": row[5],

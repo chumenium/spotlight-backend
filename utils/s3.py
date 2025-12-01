@@ -132,6 +132,12 @@ def normalize_content_url(path):
     if path.startswith('http://') or path.startswith('https://'):
         return path
     
+    # アイコンパスの場合、CloudFront URLに変換
+    # 例: /icon/filename.png -> https://d30se1secd7t6t.cloudfront.net/icon/filename.png
+    if path.startswith('/icon/'):
+        filename = path.replace('/icon/', '')
+        return get_cloudfront_url('icon', filename)
+    
     # 相対パスの場合、CloudFront URLに変換
     # 例: /content/movie/filename.mp4 -> https://d30se1secd7t6t.cloudfront.net/movie/filename.mp4
     if path.startswith('/content/'):

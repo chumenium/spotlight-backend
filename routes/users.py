@@ -10,6 +10,7 @@ from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification, insert_report
 )
+from utils.s3 import upload_to_s3, get_cloudfront_url
 import os
 import re
 import base64
@@ -26,14 +27,19 @@ def get_username():
     try:
         uid = request.user["firebase_uid"]
         username, iconimgpath = get_user_name_iconpath(uid)
+        
+        # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
+        from utils.s3 import normalize_content_url
+        normalized_iconpath = normalize_content_url(iconimgpath) if iconimgpath else None
+        
         print(uid)
         print(username)
-        print(iconimgpath)
+        print(f"アイコンパス: {iconimgpath} -> {normalized_iconpath}")
         return jsonify({
             "status": "success",
             "data": {
                 "username": username,
-                "iconimgpath": iconimgpath
+                "iconimgpath": normalized_iconpath
             }
         }), 200
     except Exception as e:
@@ -206,29 +212,34 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
+        
         if file:
             if file.startswith("data:image"):
                 file = file.split(",")[1]
             
-            # ===== 保存パス設定 =====
-            save_dir = os.path.join(current_app.root_path, "icon")
-            os.makedirs(save_dir, exist_ok=True)
-
-            filename = f"{username}_icon.png"
-            save_path = os.path.join(save_dir, filename)
+            # Base64 → バイナリ変換
+            icon_binary = base64.b64decode(file)
             
-            # ===== 画像を保存（ローカルサーバー） =====
-            # Base64 → バイナリ書き込み
-            with open(save_path, "wb") as f:
-                f.write(base64.b64decode(file))
+            # ファイル名生成（username_icon.png形式で、既存ファイルを上書き）
+            filename = f"{username}_icon.png"
+            
+            # ===== S3にアップロード（既存ファイルがある場合は上書き） =====
+            upload_to_s3(
+                file_data=icon_binary,
+                folder="icon",
+                filename=filename,
+                content_type="image/png"
+            )
+            
+            # ===== CloudFront URL生成 =====
+            iconimgpath = get_cloudfront_url("icon", filename)
         else:
+            # デフォルトアイコンの場合
             filename = "default_icon.jpg"
-        
-        iconimgpath = f"/icon/{filename}"
+            iconimgpath = get_cloudfront_url("icon", filename)
 
-        # ===== DBにパスを保存（相対パスで） =====
-        
-        print(iconimgpath)
+        # ===== DBにCloudFront URLを保存 =====
+        print(f"📸 アイコンアップロード完了: {iconimgpath}")
         chenge_icon(uid, iconimgpath)
         
         return jsonify({
@@ -314,14 +325,19 @@ def get_notification_api():
                 thumbnailpath = comment_thumbnailpath
                 contentID = comCTID
 
+            # アイコンパスとサムネイルパスをCloudFront URLに正規化
+            from utils.s3 import normalize_content_url
+            normalized_iconpath = normalize_content_url(iconpath) if iconpath else None
+            normalized_thumbnailpath = normalize_content_url(thumbnailpath) if thumbnailpath else None
+            
             notification_list.append({
                 "notificationID": notificationID,
                 "type": nt_type,
                 "title": title,
                 "text": text,
                 "contenttitle":contenttitle,
-                "iconpath":iconpath,
-                "thumbnailpath":thumbnailpath,
+                "iconpath":normalized_iconpath,
+                "thumbnailpath":normalized_thumbnailpath,
                 "contentID":contentID,
                 "timestamp": timestamp_str,
                 "isread":isread,
