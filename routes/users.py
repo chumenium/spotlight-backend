@@ -6,14 +6,15 @@ from datetime import datetime
 from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
-    get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num
+    get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
+    get_spotlight_num_by_username, get_user_contents_by_username
 )
 from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification, insert_report
 )
-from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url
+from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url, normalize_content_url
 import os
 import re
 import base64
@@ -418,6 +419,45 @@ def get_spotlight_num_api():
         uid = request.user["firebase_uid"]
         num = get_spotlight_num(uid)
         return jsonify({"status": "success", "num": num}), 200
+    except Exception as e:
+        print("⚠️通知取得エラー:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+#ユーザプロフィールを取得する
+@users_bp.route('/userhome', methods=['POST'])
+@jwt_required
+def get_unloaded_num_api():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        username = data.get("username")
+        usericon = data.get("usericon")
+        spotlightnum = get_spotlight_num_by_username(username)
+        contentdata = get_user_contents_by_username(username)
+        contents = []
+        for row in contentdata:
+            # DBから取得したパスをCloudFront URLに正規化
+            thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
+            contents.append({
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3],
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailurl": thumbnailurl
+            })
+        data = {
+            "username":username,
+            "usericon":usericon,
+            "spotlightnum":spotlightnum,
+            "contents":contents
+        }
+        return jsonify({"status": "success", "data": data}), 200
     except Exception as e:
         print("⚠️通知取得エラー:", e)
         return jsonify({
