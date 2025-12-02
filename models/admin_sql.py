@@ -22,7 +22,7 @@ def uid_admin_auth(uid):
 
 
 #ユーザ情報一覧を取得する
-def get_all_user_data():
+def get_all_user_data(offset):
     conn = None
     try:
         conn = get_connection()
@@ -39,9 +39,101 @@ def get_all_user_data():
                 LEFT OUTER JOIN comment cm ON r.comctid = cm.contentID AND r.comcmid = cm.commentID
                 WHERE r.targetuidid = 'pSpFtMWYhnPE8UrcdgiulXewqZt1' OR c.userID = u.userID OR cm.userID = u.userID
                 ),0) AS reportednum
-                FROM "user" u;
+                FROM "user" u
+                ORDER BY u.admin DESC
+                LIMIT 300 OFFSET %s;
                 """
-            )
+            ,(offset,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+#管理者に変更
+def enable_admin(userID):
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE "user" SET admin = True WHERE userID = %s;
+            """, (userID,))
+        conn.commit()
+        print(f"✅ アイコンを変更しました。")
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
+
+#一般ユーザに変更
+def disable_admin(userID):
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE "user" SET admin = False WHERE userID = %s;
+            """, (userID,))
+        conn.commit()
+        print(f"✅ アイコンを変更しました。")
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+
+#コンテンツ詳細取得
+def get_all_content_data(offset):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.contentID, c.spotlightnum, c.playnum, c.contentpath, c.thumbnailpath, c.title, c.tag, c.posttimestamp, 
+                c.userID , u.username,
+                COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum,
+                COALESCE((SELECT COUNT(*) FROM reports WHERE contentID = c.contentID) ,0)AS reportnum
+                FROM content c 
+                LEFT OUTER JOIN "user" u ON c.userID = u.userID
+                ORDER BY c.contentID ASC
+                LIMIT 300 OFFSET %s;
+                """
+            ,(offset,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+#通報取得
+def get_reports_data(offset):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT r.reportID, r.reporttype, r.reportuidID, u1.username, r.targetuidID, u2.username,
+                r.contentID, r.comCTID, r.comCMID, cm.commenttext
+                FROM reports r
+                LEFT OUTER JOIN "user" u1 ON r.reportuidID = u1.userID
+                LEFT OUTER JOIN "user" u2 ON r.targetuidID = u2.userID
+                LEFT OUTER JOIN comment cm ON r.comCTID = cm.contentID AND r.comCMID = cm.commentID
+                ORDER BY reporttimestamp ASC
+                LIMIT 300 OFFSET %s;
+                """
+            ,(offset,))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:

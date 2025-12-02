@@ -122,7 +122,6 @@ def disable_notification(userID):
 def chenge_icon(userID, iconimgpath):
     try:
         conn = get_connection()
-        cur = conn.cursor()
         with conn.cursor() as cur:
             cur.execute("""
                 UPDATE "user" SET iconimgpath = %s WHERE userID = %s;
@@ -140,7 +139,6 @@ def chenge_icon(userID, iconimgpath):
 def add_playnum(contentID):
     try:
         conn = get_connection()
-        cur = conn.cursor()
         with conn.cursor() as cur:
             # 再生回数を+1
             cur.execute("""
