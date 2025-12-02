@@ -29,7 +29,7 @@ users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 def get_username():
     try:
         uid = request.user["firebase_uid"]
-        username, iconimgpath = get_user_name_iconpath(uid)
+        username, iconimgpath, admin = get_user_name_iconpath(uid)
         
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
         from utils.s3 import normalize_content_url
@@ -42,7 +42,8 @@ def get_username():
             "status": "success",
             "data": {
                 "username": username,
-                "iconimgpath": normalized_iconpath
+                "iconimgpath": normalized_iconpath,
+                "admin": admin
             }
         }), 200
     except Exception as e:

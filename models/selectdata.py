@@ -108,7 +108,7 @@ def get_user_name_iconpath(userID):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute('SELECT username, iconimgpath FROM "user" WHERE userID = %s', (userID,))
+            cur.execute('SELECT username, iconimgpath, admin FROM "user" WHERE userID = %s', (userID,))
             row = cur.fetchone()
         if row:
             return row[0], row[1]
