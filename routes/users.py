@@ -398,6 +398,10 @@ def send_report_api():
             return jsonify({
                 "status": "error",
                 "message": str("inappropriate report type")
+            }), 400
+        return jsonify({
+                "status": "success",
+                "message": "通報を送信しました"
         }), 400
     except Exception as e:
         print("⚠️通報送信エラー:", e)
