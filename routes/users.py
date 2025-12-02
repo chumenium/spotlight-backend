@@ -402,7 +402,7 @@ def send_report_api():
         return jsonify({
                 "status": "success",
                 "message": "通報を送信しました"
-        }), 400
+        }), 200
     except Exception as e:
         print("⚠️通報送信エラー:", e)
         return jsonify({
