@@ -109,7 +109,7 @@ def add_content():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
-        username, iconimgpath = get_user_name_iconpath(uid)
+        username, iconimgpath, admin = get_user_name_iconpath(uid)
 
         # --- 受信データ ---
         content_type = data.get("type")      # "video" | "image" | "audio" | "text"
