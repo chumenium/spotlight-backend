@@ -430,7 +430,7 @@ def get_spotlight_num_api():
 #ユーザプロフィールを取得する
 @users_bp.route('/userhome', methods=['POST'])
 @jwt_required
-def get_unloaded_num_api():
+def get_user_home_api():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
