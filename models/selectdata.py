@@ -322,7 +322,8 @@ def get_search_history(userID):
                     serchword
                 FROM serchhistory
                 WHERE userID = %s
-                ORDER BY serchword, serchID DESC;
+                ORDER BY serchword, serchID DESC
+                LIMIT 10;
             """, (userID,))
             rows = cur.fetchall()
         return [r[0] for r in rows]
@@ -654,6 +655,28 @@ def get_comment_num(contentid):
                 FROM comment
                 WHERE contentid = %s
             """, (contentid,))
+            row = cur.fetchone()
+        return row[0] if row else 0
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return 0
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+#ユーザごとのスポットライト数の取得
+def get_spotlight_num(userid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    sum(spotlightnum)
+                FROM content
+                WHERE userid = %s
+            """, (userid,))
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
