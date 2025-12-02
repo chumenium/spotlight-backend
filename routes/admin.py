@@ -20,3 +20,32 @@ import base64
 
 admin_bp = Blueprint('amdin', __name__, url_prefix='/api/admin')
 
+
+# ===============================
+# 1️⃣ ユーザネームとアイコン画像のパスを取得
+# ===============================
+@admin_bp.route('/getusername', methods=['POST'])
+@jwt_required
+def get_username():
+    try:
+        uid = request.user["firebase_uid"]
+        username, iconimgpath, admin = get_user_name_iconpath(uid)
+        
+        # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
+        from utils.s3 import normalize_content_url
+        normalized_iconpath = normalize_content_url(iconimgpath) if iconimgpath else None
+        
+        print(uid)
+        print(username)
+        print(f"アイコンパス: {iconimgpath} -> {normalized_iconpath}")
+        return jsonify({
+            "status": "success",
+            "data": {
+                "username": username,
+                "iconimgpath": normalized_iconpath,
+                "admin": admin
+            }
+        }), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
