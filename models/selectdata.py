@@ -111,7 +111,7 @@ def get_user_name_iconpath(userID):
             cur.execute('SELECT username, iconimgpath, admin FROM "user" WHERE userID = %s', (userID,))
             row = cur.fetchone()
         if row:
-            return row[0], row[1]
+            return row[0], row[1], row[2]
         return None, None
     except psycopg2.Error as e:
         print("データベースエラー:", e)
