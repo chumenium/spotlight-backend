@@ -116,7 +116,7 @@ def add_content():
         title = data.get("title")
         link = data.get("link")
         tag = data.get("tag")
-
+        tag = tag.replace("#", "")
         if content_type != "text":
 
             file_data = data.get("file")         # base64文字列（コンテンツ本体）
