@@ -158,13 +158,8 @@ def add_content():
             #     content_binary = compress_video_if_needed(content_binary)
 
             # --- S3にアップロード ---
-            # 動画コンテンツのみ spotlight-input バケットの movie フォルダにアップロード
-            if content_type == "video":
-                content_folder = "movie"
-                content_bucket = "spotlight-input"
-            else:
-                content_folder = subdirs[content_type]
-                content_bucket = None  # デフォルトバケット（spotlight-contents）を使用
+            content_folder = subdirs[content_type]
+            content_bucket = None  # デフォルトバケット（spotlight-contents）を使用
             content_mime = get_content_type_from_extension(content_type, ext)
             
             # コンテンツ本体をS3にアップロード

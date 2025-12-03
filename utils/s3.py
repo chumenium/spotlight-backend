@@ -152,20 +152,25 @@ def normalize_content_url(path):
     return path
 
 
-def list_s3_content_files(folders=None):
+def list_s3_content_files(folders=None, bucket_name=None):
     """
     S3バケット内のコンテンツファイルをリストアップ
+    spotlight-contentsバケットのmovie、picture、audioフォルダから取得
     
     Args:
         folders: 取得するフォルダのリスト（例: ["movie", "picture", "audio"]）
-                 Noneの場合はすべてのコンテンツフォルダを取得
+                 Noneの場合はすべてのコンテンツフォルダ（movie, picture, audio）を取得
+        bucket_name: バケット名（Noneの場合はspotlight-contentsを使用）
     
     Returns:
         list: ファイル情報のリスト [{"folder": "movie", "filename": "xxx.mp4"}, ...]
     """
     try:
         s3 = get_s3_client()
-        bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        if bucket_name is None:
+            bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        else:
+            bucket = bucket_name
         
         if folders is None:
             folders = ['movie', 'picture', 'audio']
@@ -207,9 +212,13 @@ def list_s3_content_files(folders=None):
         return []
 
 
-def get_random_s3_content():
+def get_random_s3_content(bucket_name=None):
     """
     S3バケット内からランダムなコンテンツファイルを取得
+    spotlight-contentsバケットのmovie、picture、audioフォルダからランダムに選択
+    
+    Args:
+        bucket_name: バケット名（Noneの場合はspotlight-contentsを使用）
     
     Returns:
         dict: ランダムに選択されたファイル情報 {"folder": "movie", "filename": "xxx.mp4", "key": "movie/xxx.mp4"}
@@ -217,7 +226,7 @@ def get_random_s3_content():
     """
     import random
     
-    files = list_s3_content_files()
+    files = list_s3_content_files(bucket_name=bucket_name)
     
     if not files:
         return None
