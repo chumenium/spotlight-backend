@@ -37,10 +37,10 @@ def get_all_user_data(offset):
                 FROM reports r
                 LEFT OUTER JOIN content c ON r.contentid = c.contentID
                 LEFT OUTER JOIN comment cm ON r.comctid = cm.contentID AND r.comcmid = cm.commentID
-                WHERE r.targetuidid = 'pSpFtMWYhnPE8UrcdgiulXewqZt1' OR c.userID = u.userID OR cm.userID = u.userID
+                WHERE r.targetuidid = u.userID OR c.userID = u.userID OR cm.userID = u.userID
                 ),0) AS reportednum
                 FROM "user" u
-                ORDER BY u.admin DESC
+                ORDER BY id ASC
                 LIMIT 300 OFFSET %s;
                 """
             ,(offset,))
@@ -125,10 +125,11 @@ def get_reports_data(offset):
             cur.execute(
                 """
                 SELECT r.reportID, r.reporttype, r.reportuidID, u1.username, r.targetuidID, u2.username,
-                r.contentID, r.comCTID, r.comCMID, cm.commenttext
+                r.contentID, r.comCTID, r.comCMID, cm.commenttext, c.title
                 FROM reports r
                 LEFT OUTER JOIN "user" u1 ON r.reportuidID = u1.userID
                 LEFT OUTER JOIN "user" u2 ON r.targetuidID = u2.userID
+                LEFT OUTER JOIN content c ON r.contentID = c.contentID
                 LEFT OUTER JOIN comment cm ON r.comCTID = cm.contentID AND r.comCMID = cm.commentID
                 ORDER BY reporttimestamp ASC
                 LIMIT 300 OFFSET %s;

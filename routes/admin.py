@@ -151,6 +151,7 @@ def get_report_api():
                     "comCTID": row[7],      #通報されたコメントのコンテンツID
                     "comCMID": row[8],      #通報されたコメントのコメントID   
                     "commenttext": row[9],  #コメントテキスト
+                    "title": row[10]        #通報されたコンテンツのタイトル
                 })
             return jsonify({
                 "status": "success",
@@ -200,6 +201,7 @@ def delete_comment_by_admin_api():
         print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
+#全てPOSTメソッド
 # 最大取得件数はすべて共通して300件まで
 # offsetに取得開始の値を入れる
 # /api/admin/getuser "offset"に取得する件数を入れる0→300→600
@@ -217,8 +219,38 @@ def delete_comment_by_admin_api():
 #     "userdatas" :userdatas
 # }), 200
 
-#
+# /api/admin/enableadmin "userID"に管理者にしたいuserのuserIDを入れる
+# return jsonify({"status": "success", "message": f"{uid}を管理者に変更"}), 200
 
+# /api/admin/disableadmin "userID"に一般ユーザにしたいuserのuserIDを入れる
+# return jsonify({"status": "success", "message": f"{uid}を一般ユーザに変更"}), 200
+
+# /api/admin/content "offset"に取得する件数を入れる0→300→600
+# for row in datas:
+#     contents.append({
+#         "contentID": row[0],        #コンテンツのID
+#         "spotlightnum": row[1],     #コンテンツのスポットライト数
+#         "playnum": row[2],          #再生回数
+#         "contentpath": row[3],      #コンテンツURL
+#         "thumbnailpath": row[4],    #サムネイルURL
+#         "title": row[5],            #タイトル
+#         "tag": row[6],              #タグ
+#         "posttimestamp": row[7],    #コンテンツの投稿時間
+#         "userID": row[8],           #投稿したユーザのID
+#         "username": row[9],         #ユーザネーム
+#         "commentnum": row[10],       #コメント数
+#         "reportnum": row[11]        #通報された件数
+#     })
+# return jsonify({
+#     "status": "success",
+#     "contents" :contents
+# }), 200
+
+# /api/admin/deletecontent "contentID"に削除したいcontentのcontentIDを入れる
+# return jsonify({"status": "success", "message": "該当コンテンツを削除"}), 200
+
+# /api/admin/deletecomment "contentID"に削除したいコメントがあるコンテンツのcontentIDを"commentID"に削除したいコメントのcommentIDを入れる
+# return jsonify({"status": "success", "message": "該当コメントを削除"}), 200
 
 
 
