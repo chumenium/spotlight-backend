@@ -390,12 +390,19 @@ def get_play_history(userID):
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT c.contentID, c.title, c.spotlightnum, c.posttimestamp,
-                       c.playnum, c.link, c.thumbnailpath
-                FROM playhistory p
-                JOIN content c ON p.contentID = c.contentID
-                WHERE p.userID = %s
-                ORDER BY p.playID DESC
+                SELECT *
+                FROM (
+                    SELECT DISTINCT ON (c.contentID)
+                        c.contentID, c.title, c.spotlightnum, c.posttimestamp,
+                        c.playnum, c.link, c.thumbnailpath,
+                        p.playID
+                    FROM playhistory p
+                    JOIN content c ON p.contentID = c.contentID
+                    WHERE p.userID = %s
+                    ORDER BY c.contentID, p.playID DESC
+                ) AS unique_contents
+                ORDER BY playID DESC
+                LIMIT 50;
             """, (userID,))
             rows = cur.fetchall()
         return rows
