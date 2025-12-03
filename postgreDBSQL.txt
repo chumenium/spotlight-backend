@@ -236,3 +236,6 @@ CREATE TABLE blocklist (
     FOREIGN KEY (blockedUserID) REFERENCES "user"(userID),
     UNIQUE (userID, blockedUserID)
 );
+
+ALTER TABLE "user"
+ALTER COLUMN admin SET DEFAULT FALSE;

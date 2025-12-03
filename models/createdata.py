@@ -166,7 +166,7 @@ def insert_notification(userID, contentuserCID=None, contentuserUID=None, comCTI
 def insert_report(
     reporttype,
     reportuidID,
-    targetuidID,
+    targetuidID=None,
     contentID=None,
     comCTID=None,
     comCMID=None,

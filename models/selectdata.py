@@ -108,10 +108,10 @@ def get_user_name_iconpath(userID):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute('SELECT username, iconimgpath FROM "user" WHERE userID = %s', (userID,))
+            cur.execute('SELECT username, iconimgpath, admin FROM "user" WHERE userID = %s', (userID,))
             row = cur.fetchone()
         if row:
-            return row[0], row[1]
+            return row[0], row[1], row[2]
         return None, None
     except psycopg2.Error as e:
         print("データベースエラー:", e)
@@ -322,7 +322,8 @@ def get_search_history(userID):
                     serchword
                 FROM serchhistory
                 WHERE userID = %s
-                ORDER BY serchword, serchID DESC;
+                ORDER BY serchword, serchID DESC
+                LIMIT 10;
             """, (userID,))
             rows = cur.fetchall()
         return [r[0] for r in rows]
@@ -662,6 +663,80 @@ def get_comment_num(contentid):
     finally:
         if conn:
             release_connection(conn)
+
+
+#ユーザごとのスポットライト数の取得
+def get_spotlight_num(userid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    sum(spotlightnum)
+                FROM content
+                WHERE userid = %s
+            """, (userid,))
+            row = cur.fetchone()
+        return row[0] if row else 0
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return 0
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+#ユーザアイコンとスポットライト数を取得
+def get_spotlight_num_by_username(username):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    sum(spotlightnum)
+                FROM content c LEFT OUTER JOIN "user" u ON c.userID = u.userID
+                WHERE u.username = %s
+            """, (username,))
+            row = cur.fetchone()
+        return row[0] if row else 0
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return 0
+    finally:
+        if conn:
+            release_connection(conn)
+
+# ユーザごとコンテンツ一覧
+def get_user_contents_by_username(username):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+            SELECT 
+                c.contentID, 
+                c.title, 
+                c.spotlightnum, 
+                c.posttimestamp, 
+                c.playnum, 
+                c.link, 
+                c.thumbnailpath
+                FROM content c 
+                LEFT OUTER JOIN "user" u ON c.userid = u.userid
+                WHERE u.username = %s
+                ORDER BY c.posttimestamp DESC
+                """, (username,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")

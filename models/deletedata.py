@@ -215,6 +215,59 @@ def delete_content(uid, contentID):
         if conn:
             release_connection(conn)
 
+
+def delete_content_by_admin(contentID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+
+            # ① notification に紐づくデータ削除
+            cur.execute("""
+                DELETE FROM notification
+                WHERE contentuserCID = %s OR comCTID = %s
+            """, (contentID, contentID))
+
+            # ② コメント削除（親子全て）
+            cur.execute("""
+                DELETE FROM comment
+                WHERE contentID = %s
+            """, (contentID,))
+
+            # ③ contentuser から削除
+            cur.execute("""
+                DELETE FROM contentuser
+                WHERE contentID = %s
+            """, (contentID,))
+
+            # ④ playlistdetail から削除
+            cur.execute("""
+                DELETE FROM playlistdetail
+                WHERE contentID = %s
+            """, (contentID,))
+
+            # ⑤ playhistory から削除
+            cur.execute("""
+                DELETE FROM playhistory
+                WHERE contentID = %s
+            """, (contentID,))
+
+            # ⑥ 最後に content 本体を削除
+            cur.execute("""
+                DELETE FROM content
+                WHERE userID = %s AND contentID = %s
+            """, (contentID))
+
+        conn.commit()
+
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
+
 def delete_notification_contentuser(contentuserCID,contentuserUID):
     conn = None
     try:

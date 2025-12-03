@@ -4,13 +4,17 @@
 from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
-from models.selectdata import get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num
+from models.selectdata import (
+    get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
+    get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
+    get_spotlight_num_by_username, get_user_contents_by_username
+)
 from models.updatedata import enable_notification, disable_notification,chenge_icon
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification, insert_report
 )
-from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url
+from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url, normalize_content_url
 import os
 import re
 import base64
@@ -26,7 +30,7 @@ users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 def get_username():
     try:
         uid = request.user["firebase_uid"]
-        username, iconimgpath = get_user_name_iconpath(uid)
+        username, iconimgpath, admin = get_user_name_iconpath(uid)
         
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
         from utils.s3 import normalize_content_url
@@ -39,7 +43,8 @@ def get_username():
             "status": "success",
             "data": {
                 "username": username,
-                "iconimgpath": normalized_iconpath
+                "iconimgpath": normalized_iconpath,
+                "admin": admin
             }
         }), 200
     except Exception as e:
@@ -212,7 +217,7 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
-        username1, url = get_user_name_iconpath(uid)
+        username1, url, admin = get_user_name_iconpath(uid)
         print(url,"このURL削除する！！！！！！！！")
         success = delete_file_from_url(url)
         if file:
@@ -394,9 +399,67 @@ def send_report_api():
             return jsonify({
                 "status": "error",
                 "message": str("inappropriate report type")
-        }), 400
+            }), 400
+        return jsonify({
+                "status": "success",
+                "message": "通報を送信しました"
+        }), 200
     except Exception as e:
         print("⚠️通報送信エラー:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+#ユーザごとのスポットライト数を取得する
+@users_bp.route('/getspotlightnum', methods=['POST'])
+@jwt_required
+def get_spotlight_num_api():
+    try:
+        uid = request.user["firebase_uid"]
+        num = get_spotlight_num(uid)
+        return jsonify({"status": "success", "num": num}), 200
+    except Exception as e:
+        print("⚠️通知取得エラー:", e)
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+#ユーザプロフィールを取得する
+@users_bp.route('/userhome', methods=['POST'])
+@jwt_required
+def get_user_home_api():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        username = data.get("username")
+        usericon = data.get("usericon")
+        spotlightnum = get_spotlight_num_by_username(username)
+        contentdata = get_user_contents_by_username(username)
+        contents = []
+        for row in contentdata:
+            # DBから取得したパスをCloudFront URLに正規化
+            thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
+            contents.append({
+                "contentID": row[0],
+                "title": row[1],
+                "spotlightnum": row[2],
+                "posttimestamp": row[3],
+                "playnum": row[4],
+                "link": row[5],
+                "thumbnailurl": thumbnailurl
+            })
+        data = {
+            "username":username,
+            "usericon":usericon,
+            "spotlightnum":spotlightnum,
+            "contents":contents
+        }
+        return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
