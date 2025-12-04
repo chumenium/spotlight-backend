@@ -120,7 +120,7 @@ def add_content():
         link = data.get("link")
         tag = data.get("tag")
         print("tag:",tag)
-        if not(tag) or tag == "":
+        if not(tag) or not(tag == "") or not(tag == None):
             tag = tag.replace("#", "")
         if content_type != "text":
 
