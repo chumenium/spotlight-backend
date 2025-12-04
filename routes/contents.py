@@ -294,63 +294,24 @@ def content_detail():
         data = request.get_json() or {}
         contentID = data.get("contentID")
         
-        # contentIDが指定されていない場合はS3からランダムなコンテンツを取得
+        # contentIDが指定されていない場合はデータベースからランダムなコンテンツを取得
         if contentID is None:
-            from utils.s3 import get_random_s3_content
-            from models.selectdata import get_content_by_filename
+            from models.selectdata import get_random_content_id
             
-            # S3からランダムなファイルを取得
-            s3_file = get_random_s3_content()
+            # データベースからランダムなcontentIDを取得（S3への直接アクセスを避ける）
+            nextcontentID = get_random_content_id()
             
-            if not s3_file:
-                print("⚠️ S3からコンテンツが取得できませんでした")
+            if not nextcontentID:
+                print("⚠️ データベースからランダムコンテンツが取得できませんでした")
                 return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
             
-            print(f"🎲 S3ランダムファイル取得: {s3_file['folder']}/{s3_file['filename']}")
+            print(f"🎲 データベースからランダムコンテンツ取得: contentID={nextcontentID}")
             
-            # ファイル名からデータベースのレコードを検索
-            detail = get_content_by_filename(s3_file['folder'], s3_file['filename'])
-            
+            # データベースからコンテンツ詳細を取得
+            detail = get_content_detail(nextcontentID)
             if not detail:
-                # データベースにレコードがない場合、S3のファイル情報から直接生成
-                print(f"⚠️ データベースにレコードが見つかりません。S3ファイルから直接生成: {s3_file['filename']}")
-                # S3ファイルから直接CloudFront URLを生成
-                from utils.s3 import get_cloudfront_url
-                content_url = get_cloudfront_url(s3_file['folder'], s3_file['filename'])
-                thumbnail_url = get_cloudfront_url('thumbnail', s3_file['filename'].replace('.mp4', '_thumb.jpg').replace('.jpg', '_thumb.jpg').replace('.mp3', '_thumb.jpg'))
-                
-                # 最小限のデータを生成
-                detail = (
-                    s3_file['filename'],  # title
-                    content_url,  # contentpath
-                    0,  # spotlightnum
-                    None,  # posttimestamp
-                    0,  # playnum
-                    None,  # link
-                    'Unknown',  # username
-                    '/icon/default_icon.jpg',  # iconimgpath
-                    False,  # textflag
-                    thumbnail_url  # thumbnailpath
-                )
-                nextcontentID = None
-            else:
-                # データベースからcontentIDを取得（contentpathから逆引き）
-                try:
-                    from models.connection_pool import get_connection, release_connection
-                    # contentpathからcontentIDを取得
-                    conn = get_connection()
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            SELECT contentID FROM content 
-                            WHERE contentpath = %s OR contentpath LIKE %s
-                            LIMIT 1
-                        """, (detail[1], f'%{s3_file["filename"]}%'))
-                        row = cur.fetchone()
-                        nextcontentID = row[0] if row else None
-                    release_connection(conn)
-                except Exception as e:
-                    print(f"⚠️ contentID取得エラー: {e}")
-                    nextcontentID = None
+                print(f"⚠️ コンテンツ詳細が取得できませんでした: contentID={nextcontentID}")
+                return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
         else:
             # 指定されたcontentIDを使用（後方互換性のため）
             nextcontentID = contentID
