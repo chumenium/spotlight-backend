@@ -13,6 +13,9 @@ from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification
 )
+from models.content_random import(
+    get_recent_history_ids, get_history_ran, update_last_contetid, get_one_content
+)
 from utils.notification import send_push_notification
 
 import base64
@@ -625,3 +628,114 @@ def serch():
         print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
         
+
+@content_bp.route('/getcontents', methods=['POST'])
+@jwt_required
+def get_content_random_5():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_recent_history_ids(uid)
+        lastcontentid = None
+        # Dartで扱いやすいように整形
+        result = []
+
+        for row in rows:
+            # DBから取得したパスをCloudFront URLに正規化
+            contentpath = normalize_content_url(row[1]) if row[1] else None
+            thumbnailpath = normalize_content_url(row[9]) if len(row) > 9 and row[9] else None
+            iconimgpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
+            result.append({
+                "title": row[0],
+                "contentpath": contentpath,
+                "thumbnailpath": thumbnailpath,
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].isoformat(),
+                "playnum": row[4],
+                "link": row[5],
+                "username": row[6],
+                "iconimgpath": iconimgpath,
+                "spotlightflag": row[10],
+                "textflag":row[8],
+                "commentnum":row[11]
+            })
+            lastcontentid = row[12]
+
+        resultnum = len(result)
+        shortagenum = 5 - resultnum
+        if shortagenum > 0:
+            rows2 = get_history_ran(uid,limitnum=shortagenum)
+            for row in rows2:
+                # DBから取得したパスをCloudFront URLに正規化
+                contentpath = normalize_content_url(rows[1]) if rows[1] else None
+                thumbnailpath = normalize_content_url(rows[9]) if len(rows) > 9 and rows[9] else None
+                iconimgpath = normalize_content_url(rows[7]) if len(rows) > 7 and rows[7] else None
+                result.append({
+                    "title": rows[0],
+                    "contentpath": contentpath,
+                    "thumbnailpath": thumbnailpath,
+                    "spotlightnum": rows[2],
+                    "posttimestamp": rows[3].isoformat(),
+                    "playnum": rows[4],
+                    "link": rows[5],
+                    "username": rows[6],
+                    "iconimgpath": iconimgpath,
+                    "spotlightflag": rows[10],
+                    "textflag":rows[8],
+                    "commentnum":rows[11]
+                })
+                lastcontentid = rows[12]
+        update_last_contetid(uid, lastcontentid)
+
+        return jsonify({
+            "status": "success",
+            "message": f"{len(result)}件のコンテンツを取得",
+            "data": result
+        }), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@content_bp.route('/getcontent', methods=['POST'])
+@jwt_required
+def get_content_designation():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        contentID = data.get("contentID")
+        if not contentID:
+            return jsonify({"status": "success", "message": "contentIDが指定されていません", "data": []}), 200
+        rows = get_one_content(uid, contentID) #指定したコンテンツIDの詳細のみを取得
+        lastcontentid = None
+        # Dartで扱いやすいように整形
+        result = []
+        for row in rows:
+            # DBから取得したパスをCloudFront URLに正規化
+            contentpath = normalize_content_url(row[1]) if row[1] else None
+            thumbnailpath = normalize_content_url(row[9]) if len(row) > 9 and row[9] else None
+            iconimgpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
+            result.append({
+                "title": row[0],
+                "contentpath": contentpath,
+                "thumbnailpath": thumbnailpath,
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].isoformat(),
+                "playnum": row[4],
+                "link": row[5],
+                "username": row[6],
+                "iconimgpath": iconimgpath,
+                "spotlightflag": row[10],
+                "textflag":row[8],
+                "commentnum":row[11]
+            })
+            lastcontentid = row[12]
+            print(row[12],":",row[0],"を取得")
+        update_last_contetid(uid, lastcontentid)
+
+        return jsonify({
+            "status": "success",
+            "message": f"{len(result)}件のコンテンツを取得",#"1件のコンテンツを取得"となる
+            "data": result
+        }), 200
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
