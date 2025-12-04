@@ -146,7 +146,7 @@ def get_report_api():
                     "reportuidID": row[2],  #通報したユーザのID
                     "username": row[3],     #通報したユーザの名前
                     "targetuidID": row[4],  #通報されたユーザのID
-                    "username": row[5],     #通報されたユーザの名前
+                    "targetusername": row[5],     #通報されたユーザの名前
                     "contentID": row[6],    #通報されたコンテンツのID
                     "comCTID": row[7],      #通報されたコメントのコンテンツID
                     "comCMID": row[8],      #通報されたコメントのコメントID   

@@ -686,6 +686,7 @@ def get_content_random_5():
                     "contentID":row[12]
                 })
                 lastcontentid = row[12]
+                print(row[12],":",row[0],"を取得")
         update_last_contetid(uid, lastcontentid)
 
         return jsonify({
