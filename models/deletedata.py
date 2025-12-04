@@ -136,6 +136,12 @@ def delete_comment(contentID, commentID):
         conn = get_connection()
         with conn.cursor() as cur:
 
+            #repotsに紐づくデータ削除
+            cur.execute("""
+                DELETE FROM reports
+                WHERE comctid = %s OR comcmid = %s
+            """, (contentID, commentID))
+
             # まず、このコメントに対する子コメント（parentcommentID）を削除
             cur.execute("""
                 DELETE FROM comment
@@ -169,6 +175,12 @@ def delete_content(uid, contentID):
         conn = get_connection()
         with conn.cursor() as cur:
 
+            #repotsに紐づくデータ削除
+            cur.execute("""
+                DELETE FROM reports
+                WHERE contentID = %s
+            """, (contentID,))
+            
             # ① notification に紐づくデータ削除
             cur.execute("""
                 DELETE FROM notification
@@ -222,6 +234,12 @@ def delete_content_by_admin(contentID):
         conn = get_connection()
         with conn.cursor() as cur:
 
+            #repotsに紐づくデータ削除
+            cur.execute("""
+                DELETE FROM reports
+                WHERE contentID = %s
+            """, (contentID,))
+            
             # ① notification に紐づくデータ削除
             cur.execute("""
                 DELETE FROM notification
