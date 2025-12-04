@@ -125,7 +125,7 @@ def get_reports_data(offset):
             cur.execute(
                 """
                 SELECT r.reportID, r.reporttype, r.reportuidID, u1.username, r.targetuidID, u2.username,
-                r.contentID, r.comCTID, r.comCMID, cm.commenttext, c.title
+                r.contentID, r.comCTID, r.comCMID, cm.commenttext, c.title, r.processflag, r.reason, r.detail, r.reporttimestamp
                 FROM reports r
                 LEFT OUTER JOIN "user" u1 ON r.reportuidID = u1.userID
                 LEFT OUTER JOIN "user" u2 ON r.targetuidID = u2.userID
@@ -140,6 +140,37 @@ def get_reports_data(offset):
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+#通報を処理
+def process_report(reportID):
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE reports SET processflag = True WHERE reportID = %s;
+            """, (reportID,))
+        conn.commit()
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+    finally:
+        if conn:
+            release_connection(conn)
+
+#通報を処理解除
+def unprocess_report(reportID):
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE reports SET processflag = False WHERE reportID = %s;
+            """, (reportID,))
+        conn.commit()
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)

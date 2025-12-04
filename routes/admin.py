@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
 from models.admin_sql import (
-    get_all_user_data, uid_admin_auth, disable_admin, enable_admin, get_all_content_data,get_reports_data
+    get_all_user_data, uid_admin_auth, disable_admin, enable_admin, get_all_content_data,get_reports_data,process_report,unprocess_report
 )
 from models.deletedata import (
     delete_content_by_admin,delete_comment
@@ -151,7 +151,11 @@ def get_report_api():
                     "comCTID": row[7],      #通報されたコメントのコンテンツID
                     "comCMID": row[8],      #通報されたコメントのコメントID   
                     "commenttext": row[9],  #コメントテキスト
-                    "title": row[10]        #通報されたコンテンツのタイトル
+                    "title": row[10],        #通報されたコンテンツのタイトル
+                    "processflag": row[11] ,   #通報の処理状態(False, True)
+                    "reason": row[12] ,       #通報の理由
+                    "detail": row[13] or None,      #通報の詳細
+                    "reporttimestamp": row[14]        #通報の時間
                 })
             return jsonify({
                 "status": "success",
@@ -194,6 +198,44 @@ def delete_comment_by_admin_api():
             commentid = data.get("commentID")
             delete_comment(contentid,commentid)
             return jsonify({"status": "success", "message": "該当コメントを削除"}), 200
+        else:
+            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#通報を処理
+@admin_bp.route('/processreport', methods=['POST'])
+@jwt_required
+def process_report_api():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            data = request.get_json()
+            reportid = data.get("reportID")
+            process_report(reportid)
+            return jsonify({"status": "success", "message": "通報を処理"}), 200
+        else:
+            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        print("⚠️エラー:", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+#通報を処理解除
+@admin_bp.route('/unprocessreport', methods=['POST'])
+@jwt_required
+def unprocess_report_api():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            data = request.get_json()
+            reportid = data.get("reportID")
+
+            unprocess_report(reportid)
+            return jsonify({"status": "success", "message": "通報を処理解除"}), 200
         else:
             print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
