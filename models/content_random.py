@@ -9,7 +9,7 @@ def get_recent_history_ids(uid):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
-                    c.playnum, c.link, u1.username, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
                     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
                 FROM content c
                 JOIN "user" u1 ON c.userID = u1.userID
@@ -66,7 +66,7 @@ def get_history_ran(uid,limitnum):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
-                    c.playnum, c.link, u1.username, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
                     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
                 FROM content c
                 JOIN "user" u1 ON c.userID = u1.userID
@@ -127,7 +127,7 @@ def get_one_content(uid,contentid):
         with conn.cursor() as cur:
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
-                    c.playnum, c.link, u1.username, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
                     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
                 FROM content c
                 JOIN "user" u1 ON c.userID = u1.userID

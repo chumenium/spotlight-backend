@@ -604,8 +604,8 @@ def get_content_random_5():
         for row in rows:
             # DBから取得したパスをCloudFront URLに正規化
             contentpath = normalize_content_url(row[1]) if row[1] else None
-            thumbnailpath = normalize_content_url(row[9]) if len(row) > 9 and row[9] else None
-            iconimgpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
+            thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+            iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
             result.append({
                 "title": row[0],
                 "contentpath": contentpath,
@@ -615,13 +615,14 @@ def get_content_random_5():
                 "playnum": row[4],
                 "link": row[5],
                 "username": row[6],
+                "user_id": row[7],  # userIDを追加
                 "iconimgpath": iconimgpath,
-                "spotlightflag": row[10],
-                "textflag":row[8],
-                "commentnum":row[11],
-                "contentID":row[12]
+                "spotlightflag": row[11],
+                "textflag":row[9],
+                "commentnum":row[12],
+                "contentID":row[13]
             })
-            lastcontentid = row[12]
+            lastcontentid = row[13]
 
         resultnum = len(result)
         shortagenum = 5 - resultnum
@@ -630,8 +631,8 @@ def get_content_random_5():
             for row in rows2:
                 # DBから取得したパスをCloudFront URLに正規化
                 contentpath = normalize_content_url(row[1]) if row[1] else None
-                thumbnailpath = normalize_content_url(row[9]) if len(row) > 9 and row[9] else None
-                iconimgpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
+                thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+                iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
                 result.append({
                     "title": row[0],
                     "contentpath": contentpath,
@@ -641,14 +642,15 @@ def get_content_random_5():
                     "playnum": row[4],
                     "link": row[5],
                     "username": row[6],
+                    "user_id": row[7],  # userIDを追加
                     "iconimgpath": iconimgpath,
-                    "spotlightflag": row[10],
-                    "textflag":row[8],
-                    "commentnum":row[11],
-                    "contentID":row[12]
+                    "spotlightflag": row[11],
+                    "textflag":row[9],
+                    "commentnum":row[12],
+                    "contentID":row[13]
                 })
-                lastcontentid = row[12]
-                print(row[12],":",row[0],"を取得")
+                lastcontentid = row[13]
+                print(row[13],":",row[0],"を取得")
         update_last_contetid(uid, lastcontentid)
 
         return jsonify({
@@ -676,8 +678,8 @@ def get_content_designation():
         for row in rows:
             # DBから取得したパスをCloudFront URLに正規化
             contentpath = normalize_content_url(row[1]) if row[1] else None
-            thumbnailpath = normalize_content_url(row[9]) if len(row) > 9 and row[9] else None
-            iconimgpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
+            thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+            iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
             result.append({
                 "title": row[0],
                 "contentpath": contentpath,
@@ -687,14 +689,15 @@ def get_content_designation():
                 "playnum": row[4],
                 "link": row[5],
                 "username": row[6],
+                "user_id": row[7],  # userIDを追加
                 "iconimgpath": iconimgpath,
-                "spotlightflag": row[10],
-                "textflag":row[8],
-                "commentnum":row[11],
-                "contentID":row[12]
+                "spotlightflag": row[11],
+                "textflag":row[9],
+                "commentnum":row[12],
+                "contentID":row[13]
             })
-            lastcontentid = row[12]
-            print(row[12],":",row[0],"を取得")
+            lastcontentid = row[13]
+            print(row[13],":",row[0],"を取得")
         update_last_contetid(uid, lastcontentid)
 
         return jsonify({
