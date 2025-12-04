@@ -656,7 +656,8 @@ def get_content_random_5():
                 "iconimgpath": iconimgpath,
                 "spotlightflag": row[10],
                 "textflag":row[8],
-                "commentnum":row[11]
+                "commentnum":row[11],
+                "contentID":row[12]
             })
             lastcontentid = row[12]
 
@@ -681,7 +682,8 @@ def get_content_random_5():
                     "iconimgpath": iconimgpath,
                     "spotlightflag": row[10],
                     "textflag":row[8],
-                    "commentnum":row[11]
+                    "commentnum":row[11],
+                    "contentID":row[12]
                 })
                 lastcontentid = row[12]
         update_last_contetid(uid, lastcontentid)
@@ -725,7 +727,8 @@ def get_content_designation():
                 "iconimgpath": iconimgpath,
                 "spotlightflag": row[10],
                 "textflag":row[8],
-                "commentnum":row[11]
+                "commentnum":row[11],
+                "contentID":row[12]
             })
             lastcontentid = row[12]
             print(row[12],":",row[0],"を取得")
