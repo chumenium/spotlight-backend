@@ -600,8 +600,16 @@ def get_content_random_5():
         lastcontentid = None
         # Dartで扱いやすいように整形
         result = []
+        # 既に取得したcontentIDを追跡（重複防止用）
+        fetched_content_ids = set()
 
         for row in rows:
+            content_id = row[13]
+            # 重複チェック
+            if content_id in fetched_content_ids:
+                continue
+            fetched_content_ids.add(content_id)
+            
             # DBから取得したパスをCloudFront URLに正規化
             contentpath = normalize_content_url(row[1]) if row[1] else None
             thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
@@ -626,9 +634,20 @@ def get_content_random_5():
 
         resultnum = len(result)
         shortagenum = 5 - resultnum
-        if shortagenum > 0:
-            rows2 = get_history_ran(uid,limitnum=shortagenum)
+        # 不足分がある場合、既に取得したcontentIDを除外して追加取得
+        while shortagenum > 0:
+            rows2 = get_history_ran(uid, limitnum=shortagenum, exclude_content_ids=list(fetched_content_ids))
+            if not rows2:
+                # これ以上取得できるコンテンツがない場合
+                break
+            
             for row in rows2:
+                content_id = row[13]
+                # 重複チェック（念のため）
+                if content_id in fetched_content_ids:
+                    continue
+                fetched_content_ids.add(content_id)
+                
                 # DBから取得したパスをCloudFront URLに正規化
                 contentpath = normalize_content_url(row[1]) if row[1] else None
                 thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
@@ -651,7 +670,18 @@ def get_content_random_5():
                 })
                 lastcontentid = row[13]
                 print(row[13],":",row[0],"を取得")
-        update_last_contetid(uid, lastcontentid)
+                shortagenum -= 1
+                
+                # 5件取得できたら終了
+                if len(result) >= 5:
+                    break
+            
+            # 5件取得できたか、これ以上取得できない場合は終了
+            if len(result) >= 5 or not rows2:
+                break
+        
+        if lastcontentid:
+            update_last_contetid(uid, lastcontentid)
 
         return jsonify({
             "status": "success",

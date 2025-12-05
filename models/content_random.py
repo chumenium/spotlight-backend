@@ -59,12 +59,26 @@ def get_recent_history_ids(uid):
         if conn:
             release_connection(conn)
 
-def get_history_ran(uid,limitnum):
+def get_history_ran(uid,limitnum, exclude_content_ids=None):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute("""
+            # 除外するcontentIDの条件を追加
+            exclude_condition = ""
+            params = [uid, uid, uid, uid]
+            
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                # 除外するcontentIDのプレースホルダーを作成
+                placeholders = ','.join(['%s'] * len(exclude_content_ids))
+                exclude_condition = f"""
+                        UNION
+                        SELECT contentID
+                        FROM (VALUES ({placeholders})) AS excluded(contentID)
+                """
+                params.extend(exclude_content_ids)
+            
+            query = """
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
                     c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
                     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
@@ -90,9 +104,15 @@ def get_history_ran(uid,limitnum):
                     ) p
                     WHERE p.contentID = c.contentID
                 )
-                ORDER BY RANDOM()
-                LIMIT %s;
-            """, (uid,uid,uid,uid,limitnum))
+            """
+            # 除外するcontentIDがある場合は追加条件を適用
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                query += " AND c.contentID NOT IN (" + ','.join(['%s'] * len(exclude_content_ids)) + ")"
+                params.extend(exclude_content_ids)
+            
+            query += " ORDER BY RANDOM() LIMIT %s;"
+            params.append(limitnum)
+            cur.execute(query, tuple(params))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
