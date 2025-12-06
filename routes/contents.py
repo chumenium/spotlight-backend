@@ -738,3 +738,4 @@ def get_content_designation():
     except Exception as e:
         print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
+        
