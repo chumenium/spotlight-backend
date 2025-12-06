@@ -246,18 +246,19 @@ def add_comment():
         contentID = data.get("contentID")
         user_data = get_user_by_id(uid)
         post_username = user_data["username"]
+        commenttext = data.get("commenttext")
         if parentcommentid:
             commenid = insert_comment(
                 contentID=contentID,
                 userID=uid,
-                commenttext=data.get("commenttext"),
+                commenttext=commenttext,
                 parentcommentID=parentcommentid
             )
             #投稿もとのコメント主に通知を送信
             posted_by_user_data = get_user_by_parentcomment_id(contentID, parentcommentid)
             if posted_by_user_data["notificationenabled"]:
                 if uid != posted_by_user_data["userID"]:
-                    send_push_notification(posted_by_user_data["token"], "コメントが投稿されました","あなたが投稿したコメントに"+post_username+"さんがコメントを投稿しました")
+                    send_push_notification(posted_by_user_data["token"], post_username+"さんが返信を投稿",commenttext)
                     print(f"{posted_by_user_data['username']}に通知を送信")
             if uid != posted_by_user_data["userID"]:
                 insert_notification(userID=posted_by_user_data["userID"],comCTID=contentID,comCMID=commentid)
@@ -265,14 +266,14 @@ def add_comment():
             commentid = insert_comment(
                 contentID=contentID,
                 userID=uid,
-                commenttext=data.get("commenttext"),
+                commenttext=commenttext,
             )
             #投稿元のユーザに通知を送信
             content_user_data = get_user_by_content_id(contentID)
             if content_user_data["notificationenabled"]:
                 title = content_user_data["title"]
                 if uid != content_user_data["userID"]:
-                    send_push_notification(content_user_data["token"], "コメントが投稿されました",title+"に"+post_username+"さんがコメントを投稿しました")
+                    send_push_notification(content_user_data["token"], post_username+"さんがコメントを投稿",title+":"+commenttext)
                     print(f"{content_user_data['username']}に通知を送信")
             if uid != content_user_data["userID"]:
                 insert_notification(userID=content_user_data['userID'],comCTID=contentID,comCMID=commentid)

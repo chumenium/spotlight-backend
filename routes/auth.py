@@ -14,6 +14,9 @@ from dotenv import load_dotenv
 import os
 from firebase_admin import credentials, auth
 from utils.auth import jwt_required
+from utils.s3 import get_cloudfront_url
+from models.updatedata import chenge_icon
+
 
 # ====== 設定 ======
 load_dotenv()
@@ -49,6 +52,10 @@ def handle_firebase_auth():
             # DBに登録（ユーザ作成 or 更新）
             token = data.get("token")  # 通知用トークン
             register_username(firebase_uid, token)
+            filename = "default_icon.jpg"
+            #デフォルトアイコンを設定
+            iconimgpath = get_cloudfront_url("icon", filename)
+            chenge_icon(firebase_uid, iconimgpath)
 
         # JWT発行
         jwt_token = jwt.encode({
