@@ -7,9 +7,9 @@ from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
-    get_spotlight_num_by_username, get_user_contents_by_username
+    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username
 )
-from models.updatedata import enable_notification, disable_notification,chenge_icon
+from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
     insert_search_history, insert_play_history, insert_notification, insert_report
@@ -30,7 +30,7 @@ users_bp = Blueprint('users', __name__, url_prefix='/api/users')
 def get_username():
     try:
         uid = request.user["firebase_uid"]
-        username, iconimgpath, admin = get_user_name_iconpath(uid)
+        username, iconimgpath, admin, bio = get_user_name_iconpath(uid)
         
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
         from utils.s3 import normalize_content_url
@@ -42,9 +42,11 @@ def get_username():
         return jsonify({
             "status": "success",
             "data": {
+                "firebase_uid": uid,
                 "username": username,
                 "iconimgpath": normalized_iconpath,
-                "admin": admin
+                "admin": admin,
+                "bio": bio
             }
         }), 200
     except Exception as e:
@@ -208,6 +210,37 @@ def get_prolile_data():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+#自己紹介文を更新する処理
+@users_bp.route('/updatebio', methods=['POST'])
+@jwt_required
+def update_bio_api():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        bio = data.get("bio", "").strip() if data.get("bio") else ""
+        
+        # 文字数チェック
+        if len(bio) > 200:
+            return jsonify({
+                "status": "error",
+                "message": "自己紹介文は200文字以内で入力してください"
+            }), 400
+        
+        # データベースを更新
+        update_bio(uid, bio if bio else None)
+        
+        return jsonify({
+            "status": "success",
+            "message": "自己紹介文を更新しました"
+        }), 200
+        
+    except Exception as e:
+        print("⚠️エラー(update_bio_api):", e)
+        return jsonify({
+            "status": "error",
+            "message": "サーバーエラーが発生しました"
+        }), 500
+
 #アイコン変更の処理
 @users_bp.route('/changeicon', methods=['POST'])
 @jwt_required
@@ -217,7 +250,7 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
-        username1, url, admin = get_user_name_iconpath(uid)
+        username1, url, admin, _ = get_user_name_iconpath(uid)
         print(url,"このURL削除する！！！！！！！！")
         success = delete_file_from_url(url)
         if file:
@@ -437,6 +470,7 @@ def get_user_home_api():
         username = data.get("username")
         usericon = data.get("usericon")
         spotlightnum = get_spotlight_num_by_username(username)
+        bio = get_bio_by_username(username)
         contentdata = get_user_contents_by_username(username)
         contents = []
         for row in contentdata:
@@ -455,6 +489,7 @@ def get_user_home_api():
             "username":username,
             "usericon":usericon,
             "spotlightnum":spotlightnum,
+            "bio": bio,
             "contents":contents
         }
         return jsonify({"status": "success", "data": data}), 200

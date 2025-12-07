@@ -108,14 +108,14 @@ def get_user_name_iconpath(userID):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute('SELECT username, iconimgpath, admin FROM "user" WHERE userID = %s', (userID,))
+            cur.execute('SELECT username, iconimgpath, admin, bio FROM "user" WHERE userID = %s', (userID,))
             row = cur.fetchone()
         if row:
-            return row[0], row[1], row[2]
-        return None, None
+            return row[0], row[1], row[2], row[3]
+        return None, None, None, None
     except psycopg2.Error as e:
         print("データベースエラー:", e)
-        return None, None
+        return None, None, None, None
     finally:
         if conn:
             release_connection(conn)
@@ -740,6 +740,25 @@ def get_user_contents_by_username(username):
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+# usernameからbioを取得
+def get_bio_by_username(username):
+    """usernameからbioを取得"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT bio FROM "user" WHERE username = %s', (username,))
+            row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
     finally:
         if conn:
             release_connection(conn)

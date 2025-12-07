@@ -153,3 +153,23 @@ def add_playnum(contentID):
     finally:
         if conn:
             release_connection(conn)
+
+#----------------自己紹介文を更新----------------
+def update_bio(userID, bio):
+    """自己紹介文を更新"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE "user" SET bio = %s WHERE userID = %s;
+            """, (bio if bio else None, userID))
+        conn.commit()
+        print(f"✅ 自己紹介文を更新しました。")
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            release_connection(conn)
