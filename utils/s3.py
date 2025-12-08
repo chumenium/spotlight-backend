@@ -349,7 +349,14 @@ def delete_from_s3(key, bucket_name=None):
         return True
 
     except Exception as e:
-        print(f"❌ S3削除エラー: {e} (bucket={bucket_name}, key={key})")
+        error_msg = str(e)
+        # AccessDeniedエラーの場合は詳細なメッセージを出力
+        if 'AccessDenied' in error_msg:
+            print(f"❌ S3削除エラー（権限不足）: bucket={bucket}, key={key}")
+            print(f"   IAMユーザーに s3:DeleteObject 権限が必要です")
+            print(f"   エラー詳細: {error_msg}")
+        else:
+            print(f"❌ S3削除エラー: {error_msg} (bucket={bucket}, key={key})")
         return False
 
 
