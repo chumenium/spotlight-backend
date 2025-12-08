@@ -206,37 +206,60 @@ def update_last_contetid_newest(uid):
     finally:
         if conn:
             release_connection(conn)
-#新しい順
-def get_content_newest_5(uid):
+
+#最新投稿を取得
+def get_content_latest_5(uid):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT lastcontetid FROM 'user' WHERE userID = %s", (uid,))
-            lastcontentid = cur.fetchone()
-            if lastcontentid:
-                lastcontentid = lastcontentid[0]
+            cur.execute("SELECT LMcontentID FROM 'user' WHERE userID = %s", (uid,)) 
+            LMcontentID = cur.fetchone()
+            if LMcontentID:
+                LMcontentID = LMcontentID[0]
             else:
-                lastcontentid = 0
-            if lastcontentid <= 1:
-                cur.execute("""
-                    UPDATE "user"
-                    SET lastcontetid = (
-                        SELECT MAX(contentid) FROM content WHERE userID NOT IN (
-                            SELECT blockedUserID
-                            FROM blocklist
-                            WHERE userID = %s
-                            UNION
-                            SELECT userID
-                            FROM blocklist
-                            WHERE blockedUserID = %s)
-                    ) WHERE userID = %s;
-                    """, (uid,uid,uid))
-            maxcontentid = cur.fetchone()
-            if maxcontentid:
-                maxcontentid = maxcontentid[0]
-            else:
-                maxcontentid = 0
+                LMcontentID = 1000000000
+            cur.execute("""
+                SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
+                FROM content c
+                JOIN "user" u1 ON c.userID = u1.userID
+                LEFT JOIN contentuser cu 
+                ON cu.contentID = c.contentID
+                AND cu.userID = %s
+                WHERE c.contentID > %s
+                AND c.userID NOT IN (
+                    SELECT blockedUserID
+                    FROM blocklist
+                    WHERE userID = %s
+                    UNION
+                    SELECT userID
+                    FROM blocklist
+                    WHERE blockedUserID = %s
+                )
+                ORDER BY c.contentID DESC
+                LIMIT 5;
+            """, (uid, LMcontentID, uid, uid))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+#新しい順
+def get_content_newest_5(uid, limitnum):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""SELECT lastcontetid, LMcontentID FROM "user" WHERE userID = %s""", (uid,))
+            lastcontetid, LMcontentID = cur.fetchone()
+            if lastcontetid == LMcontentID:
+                lastcontetid += 1
             cur.execute("""
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
                     c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
@@ -257,8 +280,8 @@ def get_content_newest_5(uid):
                     WHERE blockedUserID = %s
                 )
                 ORDER BY c.contentID DESC
-                LIMIT 5;
-            """, (uid, uid, uid, uid))
+                LIMIT %s;
+            """, (uid, uid, uid, uid, limitnum))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
