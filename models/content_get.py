@@ -165,6 +165,146 @@ def get_one_content(uid,contentid):
         if conn:
             release_connection(conn)
 
+
+#新しい順lastcontentid更新
+def update_last_contetid_newest(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE "user"
+                SET lastcontetid = (
+                    SELECT MAX(contentid) FROM content WHERE userID NOT IN (
+                        SELECT blockedUserID
+                        FROM blocklist
+                        WHERE userID = %s
+                        UNION
+                        SELECT userID
+                        FROM blocklist
+                        WHERE blockedUserID = %s)
+                ) WHERE userID = %s;
+                """, (uid,uid,uid))
+            cur.execute("""
+                UPDATE "user"
+                SET LMcontentID = (
+                    SELECT MAX(contentid) FROM content WHERE userID NOT IN (
+                        SELECT blockedUserID
+                        FROM blocklist
+                        WHERE userID = %s
+                        UNION
+                        SELECT userID
+                        FROM blocklist
+                        WHERE blockedUserID = %s)
+                ) WHERE userID = %s;
+                """, (uid,uid,uid))
+            conn.commit()
+        return True
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+#新しい順
+def get_content_newest_5(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("SELECT lastcontetid FROM 'user' WHERE userID = %s", (uid,))
+            lastcontentid = cur.fetchone()
+            if lastcontentid:
+                lastcontentid = lastcontentid[0]
+            else:
+                lastcontentid = 0
+            if lastcontentid <= 1:
+                cur.execute("""
+                    UPDATE "user"
+                    SET lastcontetid = (
+                        SELECT MAX(contentid) FROM content WHERE userID NOT IN (
+                            SELECT blockedUserID
+                            FROM blocklist
+                            WHERE userID = %s
+                            UNION
+                            SELECT userID
+                            FROM blocklist
+                            WHERE blockedUserID = %s)
+                    ) WHERE userID = %s;
+                    """, (uid,uid,uid))
+            maxcontentid = cur.fetchone()
+            if maxcontentid:
+                maxcontentid = maxcontentid[0]
+            else:
+                maxcontentid = 0
+            cur.execute("""
+                SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
+                FROM content c
+                JOIN "user" u1 ON c.userID = u1.userID
+                LEFT JOIN contentuser cu 
+                ON cu.contentID = c.contentID
+                AND cu.userID = %s
+                WHERE c.contentID < (SELECT COALESCE(lastcontetid,0) FROM "user" WHERE userID = %s)
+                AND c.userID NOT IN (
+                    SELECT blockedUserID
+                    FROM blocklist
+                    WHERE userID = %s
+                    UNION
+                    SELECT userID
+                    FROM blocklist
+                    WHERE blockedUserID = %s
+                )
+                ORDER BY c.contentID DESC
+                LIMIT 5;
+            """, (uid, uid, uid, uid))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+#古い順
+def get_content_oldest_5(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+                    c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
+                    cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
+                FROM content c
+                JOIN "user" u1 ON c.userID = u1.userID
+                LEFT JOIN contentuser cu 
+                ON cu.contentID = c.contentID
+                AND cu.userID = %s
+                WHERE c.contentID > (SELECT COALESCE(lastcontetid,0) FROM "user" WHERE userID = %s)
+                AND c.userID NOT IN (
+                    SELECT blockedUserID
+                    FROM blocklist
+                    WHERE userID = %s
+                    UNION
+                    SELECT userID
+                    FROM blocklist
+                    WHERE blockedUserID = %s
+                )
+                ORDER BY c.contentID ASC
+                LIMIT 5;
+            """, (uid, uid, uid, uid))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
 # SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
 #        c.playnum, c.link, u1.username, u1.iconimgpath, c.textflag, c.thumbnailpath,
 #        cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
@@ -242,3 +382,47 @@ def get_one_content(uid,contentid):
 #     ON cu.contentID = c.contentID
 #     AND cu.userID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
 # WHERE c.contentID = 3;
+
+
+# SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+#     c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
+#     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
+# FROM content c
+# JOIN "user" u1 ON c.userID = u1.userID
+# LEFT JOIN contentuser cu 
+# ON cu.contentID = c.contentID
+# AND cu.userID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+# WHERE c.contentID > (SELECT COALESCE(lastcontetid,0) FROM "user" WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2')
+# AND c.userID NOT IN (
+#     SELECT blockedUserID
+#     FROM blocklist
+#     WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+#     UNION
+#     SELECT userID
+#     FROM blocklist
+#     WHERE blockedUserID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+# )
+# ORDER BY c.contentID ASC
+# LIMIT 5;
+
+
+# SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
+#     c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
+#     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
+# FROM content c
+# JOIN "user" u1 ON c.userID = u1.userID
+# LEFT JOIN contentuser cu 
+# ON cu.contentID = c.contentID
+# AND cu.userID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+# WHERE c.contentID < (SELECT COALESCE(lastcontetid,0) FROM "user" WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2')
+# AND c.userID NOT IN (
+#     SELECT blockedUserID
+#     FROM blocklist
+#     WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+#     UNION
+#     SELECT userID
+#     FROM blocklist
+#     WHERE blockedUserID = '24m1kumuhUaYZOKyH3YraLLzFnX2'
+# )
+# ORDER BY c.contentID DESC
+# LIMIT 5;
