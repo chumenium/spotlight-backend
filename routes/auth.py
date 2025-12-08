@@ -52,7 +52,7 @@ def handle_firebase_auth():
             # DBに登録（ユーザ作成 or 更新）
             token = data.get("token")  # 通知用トークン
             register_username(firebase_uid, token)
-            filename = "default_icon.jpg"
+            filename = "default_icon.png"
             #デフォルトアイコンを設定
             iconimgpath = get_cloudfront_url("icon", filename)
             chenge_icon(firebase_uid, iconimgpath)

@@ -250,9 +250,36 @@ def change_icon():
         data = request.get_json()
         username = data.get("username")
         file = data.get("iconimg")
-        username1, url, admin, _ = get_user_name_iconpath(uid)
-        print(url,"このURL削除する！！！！！！！！")
-        success = delete_file_from_url(url)
+        
+        # 古いアイコンパスを取得
+        username1, old_icon_url, admin, _ = get_user_name_iconpath(uid)
+        
+        # 古いアイコンをS3から削除（default_icon.pngは削除しない）
+        if old_icon_url:
+            # default_icon.pngかどうかをチェック
+            # S3キーを抽出してファイル名を確認
+            from utils.s3 import extract_s3_key_from_url
+            old_icon_key = extract_s3_key_from_url(old_icon_url)
+            
+            # ファイル名がdefault_icon.pngかどうかをチェック
+            # S3キーは "icon/default_icon.png" または "icon/xxx_icon.png" の形式
+            is_default_icon = False
+            if old_icon_key:
+                # ファイル名を抽出（最後のスラッシュ以降）
+                filename = old_icon_key.split("/")[-1] if "/" in old_icon_key else old_icon_key
+                # default_icon.pngかどうかを厳密にチェック
+                is_default_icon = filename == "default_icon.png" or old_icon_key == "icon/default_icon.png"
+            
+            if not is_default_icon:
+                try:
+                    delete_file_from_url(old_icon_url)
+                    print(f"🗑️ 古いアイコンファイルを削除: {old_icon_url} (key: {old_icon_key})")
+                except Exception as e:
+                    # S3削除エラーは無視（ファイルが既に存在しない場合など）
+                    print(f"⚠️ 古いアイコン削除エラー（無視）: {e}")
+            else:
+                print(f"ℹ️ default_icon.pngは削除しません: {old_icon_url} (key: {old_icon_key})")
+        
         if file:
             if file.startswith("data:image"):
                 file = file.split(",")[1]
@@ -275,7 +302,7 @@ def change_icon():
             iconimgpath = get_cloudfront_url("icon", filename)
         else:
             # デフォルトアイコンの場合
-            filename = "default_icon.jpg"
+            filename = "default_icon.png"
             iconimgpath = get_cloudfront_url("icon", filename)
 
         # ===== DBにCloudFront URLを保存 =====

@@ -386,7 +386,7 @@
     "iconimg": "data:image/png;base64,..."  // 画像のData URL形式（任意）
   }
   ```
-  - 画像を送らない場合は`default_icon.jpg`が設定されます
+  - 画像を送らない場合は`default_icon.png`が設定されます
 - **レスポンス**:
   ```json
   {
