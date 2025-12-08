@@ -280,7 +280,8 @@ def change_icon():
             else:
                 print(f"ℹ️ default_icon.pngは削除しません: {old_icon_url} (key: {old_icon_key})")
         
-        if file:
+        # fileが空文字列、None、または空の場合はデフォルトアイコンに設定
+        if file and file.strip() and file != "default_icon.jpg":
             if file.startswith("data:image"):
                 file = file.split(",")[1]
             
@@ -301,9 +302,10 @@ def change_icon():
             # ===== CloudFront URL生成 =====
             iconimgpath = get_cloudfront_url("icon", filename)
         else:
-            # デフォルトアイコンの場合
+            # デフォルトアイコンの場合（fileが空、None、またはdefault_icon.jpgの場合）
             filename = "default_icon.png"
             iconimgpath = get_cloudfront_url("icon", filename)
+            print(f"📸 デフォルトアイコンに設定: {iconimgpath}")
 
         # ===== DBにCloudFront URLを保存 =====
         print(f"📸 アイコンアップロード完了: {iconimgpath}")
