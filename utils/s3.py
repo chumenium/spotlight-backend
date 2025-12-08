@@ -296,14 +296,52 @@ def delete_from_s3(key, bucket_name=None):
     """
     S3 からオブジェクトを削除（key と bucket を指定）。
     bucket が None の場合はデフォルトバケットを使う。
+    アプリケーションコンテキストなしでも動作するように環境変数から直接取得。
     """
     try:
-        s3 = boto3.client("s3")
-
-        if bucket_name is None:
-            bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+        import os
+        from flask import has_app_context
+        
+        # アプリケーションコンテキストがある場合はそれを使用、ない場合は環境変数から取得
+        if has_app_context():
+            try:
+                if bucket_name is None:
+                    bucket = current_app.config.get('S3_BUCKET_NAME', 'spotlight-contents')
+                else:
+                    bucket = bucket_name
+                access_key = current_app.config.get('AWS_ACCESS_KEY_ID')
+                secret_key = current_app.config.get('AWS_SECRET_ACCESS_KEY')
+                region = current_app.config.get('S3_REGION', 'ap-northeast-1')
+            except (RuntimeError, AttributeError):
+                # フォールバック: 環境変数から取得
+                if bucket_name is None:
+                    bucket = os.getenv('S3_BUCKET_NAME', 'spotlight-contents')
+                else:
+                    bucket = bucket_name
+                access_key = os.getenv('AWS_ACCESS_KEY_ID')
+                secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+                region = os.getenv('S3_REGION', 'ap-northeast-1')
         else:
-            bucket = bucket_name
+            # アプリケーションコンテキストがない場合は環境変数から直接取得
+            if bucket_name is None:
+                bucket = os.getenv('S3_BUCKET_NAME', 'spotlight-contents')
+            else:
+                bucket = bucket_name
+            access_key = os.getenv('AWS_ACCESS_KEY_ID')
+            secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+            region = os.getenv('S3_REGION', 'ap-northeast-1')
+        
+        # S3クライアントを作成
+        if access_key and secret_key:
+            s3 = boto3.client(
+                's3',
+                region_name=region,
+                aws_access_key_id=access_key,
+                aws_secret_access_key=secret_key
+            )
+        else:
+            # 認証情報がない場合はデフォルトの認証情報を使用（IAMロールなど）
+            s3 = boto3.client('s3', region_name=region)
 
         s3.delete_object(Bucket=bucket, Key=key)
 
@@ -318,20 +356,14 @@ def delete_from_s3(key, bucket_name=None):
 def delete_file_from_url(url):
     """
     CloudFront URL を元に S3 のファイルを削除する統合関数。
-    ・URLからkeyを抽出
-    ・コンテンツ種別を判別（movie は別バケット）
+    ・URLからkeyを抽出（例: https://xxx.cloudfront.net/movie/xxx.mp4 → movie/xxx.mp4）
+    ・全て spotlight-contents バケットに統一
     """
     key = extract_s3_key_from_url(url)
     if not key:
-        print("⚠️ URL から S3 key を抽出できませんでした")
+        print(f"⚠️ URL から S3 key を抽出できませんでした: {url}")
         return False
 
-    # --- バケット判定 ---
-    # movie = spotlight-input
-    # その他 = spotlight-contents
-    if key.startswith("movie/"):
-        bucket = "spotlight-input"
-    else:
-        bucket = None  # デフォルトバケット（spotlight-contents）
-
-    return delete_from_s3(key, bucket_name=bucket)
+    # 全て spotlight-contents バケットに統一
+    # bucket_name=None を指定すると delete_from_s3 内でデフォルトバケット（spotlight-contents）を使用
+    return delete_from_s3(key, bucket_name=None)

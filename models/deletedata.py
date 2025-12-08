@@ -1,6 +1,7 @@
 import psycopg2
 import os
 from models.connection_pool import get_connection, release_connection
+from utils.s3 import delete_file_from_url
 
 # ============================================
 # 1. 視聴履歴（playhistory）から特定の履歴を削除
@@ -168,12 +169,25 @@ def delete_comment(contentID, commentID):
 # ============================================
 # 7. 特定のコンテンツを削除
 #    → 関連テーブル（comment / playhistory / playlistdetail / notification / contentuser）も削除
+#    → S3からもファイルを削除
 # ============================================
 def delete_content(uid, contentID):
     conn = None
+    contentpath = None
+    thumbnailpath = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
+            # 削除前にコンテンツのURLを取得
+            cur.execute("""
+                SELECT contentpath, thumbnailpath
+                FROM content
+                WHERE userID = %s AND contentID = %s
+            """, (uid, contentID))
+            row = cur.fetchone()
+            if row:
+                contentpath = row[0]
+                thumbnailpath = row[1]
 
             #repotsに紐づくデータ削除
             cur.execute("""
@@ -219,6 +233,21 @@ def delete_content(uid, contentID):
 
         conn.commit()
 
+        # S3からファイルを削除
+        if contentpath and (contentpath.startswith('http://') or contentpath.startswith('https://')):
+            try:
+                delete_file_from_url(contentpath)
+                print(f"🗑️ S3からコンテンツファイルを削除: {contentpath}")
+            except Exception as e:
+                print(f"⚠️ S3削除エラー(contentpath): {e}")
+
+        if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
+            try:
+                delete_file_from_url(thumbnailpath)
+                print(f"🗑️ S3からサムネイルファイルを削除: {thumbnailpath}")
+            except Exception as e:
+                print(f"⚠️ S3削除エラー(thumbnailpath): {e}")
+
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
@@ -230,9 +259,21 @@ def delete_content(uid, contentID):
 
 def delete_content_by_admin(contentID):
     conn = None
+    contentpath = None
+    thumbnailpath = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
+            # 削除前にコンテンツのURLを取得
+            cur.execute("""
+                SELECT contentpath, thumbnailpath
+                FROM content
+                WHERE contentID = %s
+            """, (contentID,))
+            row = cur.fetchone()
+            if row:
+                contentpath = row[0]
+                thumbnailpath = row[1]
 
             #repotsに紐づくデータ削除
             cur.execute("""
@@ -273,10 +314,25 @@ def delete_content_by_admin(contentID):
             # ⑥ 最後に content 本体を削除
             cur.execute("""
                 DELETE FROM content
-                WHERE userID = %s AND contentID = %s
-            """, (contentID))
+                WHERE contentID = %s
+            """, (contentID,))
 
         conn.commit()
+
+        # S3からファイルを削除
+        if contentpath and (contentpath.startswith('http://') or contentpath.startswith('https://')):
+            try:
+                delete_file_from_url(contentpath)
+                print(f"🗑️ S3からコンテンツファイルを削除: {contentpath}")
+            except Exception as e:
+                print(f"⚠️ S3削除エラー(contentpath): {e}")
+
+        if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
+            try:
+                delete_file_from_url(thumbnailpath)
+                print(f"🗑️ S3からサムネイルファイルを削除: {thumbnailpath}")
+            except Exception as e:
+                print(f"⚠️ S3削除エラー(thumbnailpath): {e}")
 
     except psycopg2.Error as e:
         if conn:
