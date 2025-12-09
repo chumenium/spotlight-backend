@@ -593,6 +593,7 @@ def serch():
         return jsonify({"status": "error", "message": str(e)}), 400
         
 
+#コンテンツのランダム取得API
 @content_bp.route('/getcontents', methods=['POST'])
 @jwt_required
 def get_content_random_5():
@@ -695,6 +696,7 @@ def get_content_random_5():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
+#コンテンツを新しい順で取得
 @content_bp.route('/getcontents/newest', methods=['POST'])
 @jwt_required
 def get_content_newest_5():
@@ -735,7 +737,8 @@ def get_content_newest_5():
                 "contentID":row[13]
             })
             lastcontentid = row[13]
-
+            print("ランダム取得したコンテンツ1")
+            print(result)
         resultnum = len(result)
         shortagenum = 5 - resultnum
         # 不足分がある場合、既に取得したcontentIDを除外して追加取得
@@ -776,6 +779,8 @@ def get_content_newest_5():
                 print(row[13],":",row[0],"を取得")
                 shortagenum -= 1
                 
+                print("ランダム取得したコンテンツ2")
+                print(result)
                 # 5件取得できたら終了
                 if len(result) >= 5:
                     break
@@ -797,13 +802,49 @@ def get_content_newest_5():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
-@content_bp.route('/lastcontentid/newest', methods=['POST'])
+#コンテンツを古い順で取得
+@content_bp.route('/lastcontentid/oldest', methods=['POST'])
 @jwt_required
 def get_lastcontentid_newest():
     try:
         uid = request.user["firebase_uid"]
-        update_last_contetid_newest(uid)
+        rows =get_content_oldest_5(uid)
+ # Dartで扱いやすいように整形
+        result = []
+        # 既に取得したcontentIDを追跡（重複防止用）
+        fetched_content_ids = set()
 
+        for row in rows:
+            content_id = row[13]
+            # 重複チェック
+            if content_id in fetched_content_ids:
+                continue
+            fetched_content_ids.add(content_id)
+            
+            # DBから取得したパスをCloudFront URLに正規化
+            contentpath = normalize_content_url(row[1]) if row[1] else None
+            thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+            iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+            result.append({
+                "title": row[0],
+                "contentpath": contentpath,
+                "thumbnailpath": thumbnailpath,
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].isoformat(),
+                "playnum": row[4],
+                "link": row[5],
+                "username": row[6],
+                "user_id": row[7],  # userIDを追加
+                "iconimgpath": iconimgpath,
+                "spotlightflag": row[11],
+                "textflag":row[9],
+                "commentnum":row[12],
+                "contentID":row[13]
+            })
+            lastcontentid = row[13]
+
+        resultnum = len(result)
+        shortagenum = 5 - resultnum
         return jsonify({
             "status": "success",
             "message": "最終読み込みコンテンツの初期化完了"
