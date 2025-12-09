@@ -812,7 +812,7 @@ def get_content_newest_5_API():
 
 @content_bp.route('/getcontents/oldest', methods=['POST'])
 @jwt_required
-def get_content_oldest_5():
+def get_content_oldest_5_API():
     try:
         uid = request.user["firebase_uid"]
         rows = get_content_oldest_5(uid)
