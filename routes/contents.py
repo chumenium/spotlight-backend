@@ -1,7 +1,7 @@
 """
 コンテンツ管理API
 """
-from turtle import title
+# from turtle import title
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required
 from models.updatedata import spotlight_on, spotlight_off,add_playnum
