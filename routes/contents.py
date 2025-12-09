@@ -15,7 +15,9 @@ from models.createdata import (
 )
 from models.content_get import(
         get_recent_history_ids, get_history_ran, update_last_contetid, get_one_content, 
-        get_content_newest_5, get_content_oldest_5, get_content_latest_5, update_last_contetid_newest
+        get_content_newest_5, get_content_oldest_5, get_content_latest_5, update_last_contetid_newest,
+        get_content_random_5, get_content_newest_with_priority, get_content_oldest_with_newest_queue,
+        get_content_id_range
 )
 from utils.notification import send_push_notification
 
@@ -697,27 +699,35 @@ def get_content_random_5():
 
 @content_bp.route('/getcontents/newest', methods=['POST'])
 @jwt_required
-def get_content_newest_5():
+def get_content_newest_api():
+    """
+    新着順で5件取得（新着投稿を優先的に表示、ループ対応）
+    最後まで行ったら最初に戻る
+    """
     try:
         uid = request.user["firebase_uid"]
-
-        rows = get_content_latest_5(uid)
-        # Dartで扱いやすいように整形
+        
+        # 新着投稿を優先的に取得
+        rows = get_content_newest_with_priority(uid, limitnum=5)
+        
         result = []
-        # 既に取得したcontentIDを追跡（重複防止用）
-        fetched_content_ids = set()
-
+        min_content_id = None
+        max_content_id = None
+        
         for row in rows:
             content_id = row[13]
-            # 重複チェック
-            if content_id in fetched_content_ids:
-                continue
-            fetched_content_ids.add(content_id)
+            
+            # 最小・最大IDを記録（ループ判定用）
+            if min_content_id is None or content_id < min_content_id:
+                min_content_id = content_id
+            if max_content_id is None or content_id > max_content_id:
+                max_content_id = content_id
             
             # DBから取得したパスをCloudFront URLに正規化
             contentpath = normalize_content_url(row[1]) if row[1] else None
             thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
             iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+            
             result.append({
                 "title": row[0],
                 "contentpath": contentpath,
@@ -727,73 +737,69 @@ def get_content_newest_5():
                 "playnum": row[4],
                 "link": row[5],
                 "username": row[6],
-                "user_id": row[7],  # userIDを追加
+                "user_id": row[7],
                 "iconimgpath": iconimgpath,
                 "spotlightflag": row[11],
-                "textflag":row[9],
-                "commentnum":row[12],
-                "contentID":row[13]
+                "textflag": row[9],
+                "commentnum": row[12],
+                "contentID": row[13]
             })
-            lastcontentid = row[13]
-
-        resultnum = len(result)
-        shortagenum = 5 - resultnum
-        # 不足分がある場合、既に取得したcontentIDを除外して追加取得
-        while shortagenum > 0:
-            rows2 = get_content_newest_5(uid, limitnum=shortagenum)
-            if not rows2:
-                # これ以上取得できるコンテンツがない場合
-                break
-            
-            for row in rows2:
-                content_id = row[13]
-                # 重複チェック（念のため）
-                if content_id in fetched_content_ids:
-                    continue
-                fetched_content_ids.add(content_id)
-                
-                # DBから取得したパスをCloudFront URLに正規化
-                contentpath = normalize_content_url(row[1]) if row[1] else None
-                thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
-                iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
-                result.append({
-                    "title": row[0],
-                    "contentpath": contentpath,
-                    "thumbnailpath": thumbnailpath,
-                    "spotlightnum": row[2],
-                    "posttimestamp": row[3].isoformat(),
-                    "playnum": row[4],
-                    "link": row[5],
-                    "username": row[6],
-                    "user_id": row[7],  # userIDを追加
-                    "iconimgpath": iconimgpath,
-                    "spotlightflag": row[11],
-                    "textflag":row[9],
-                    "commentnum":row[12],
-                    "contentID":row[13]
-                })
-                lastcontentid = row[13]
-                print(row[13],":",row[0],"を取得")
-                shortagenum -= 1
-                
-                # 5件取得できたら終了
-                if len(result) >= 5:
-                    break
-            
-            # 5件取得できたか、これ以上取得できない場合は終了
-            if len(result) >= 5 or not rows2:
-                break
         
-        if lastcontentid:
-            update_last_contetid(uid, lastcontentid)
-
+        # 不足分がある場合、ループして最初から取得
+        if len(result) < 5:
+            # 最小IDから取得（ループ）
+            min_id, max_id = get_content_id_range(uid)
+            if min_id:
+                additional_rows = get_content_newest_5(uid, limitnum=5 - len(result))
+                for row in additional_rows:
+                    if len(result) >= 5:
+                        break
+                    
+                    contentpath = normalize_content_url(row[1]) if row[1] else None
+                    thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+                    iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+                    
+                    result.append({
+                        "title": row[0],
+                        "contentpath": contentpath,
+                        "thumbnailpath": thumbnailpath,
+                        "spotlightnum": row[2],
+                        "posttimestamp": row[3].isoformat(),
+                        "playnum": row[4],
+                        "link": row[5],
+                        "username": row[6],
+                        "user_id": row[7],
+                        "iconimgpath": iconimgpath,
+                        "spotlightflag": row[11],
+                        "textflag": row[9],
+                        "commentnum": row[12],
+                        "contentID": row[13]
+                    })
+        
+        # 最後のcontentIDを更新
+        if result:
+            last_content_id = result[-1]["contentID"]
+            update_last_contetid(uid, last_content_id)
+            
+            # 新着投稿のLMcontentIDを更新
+            update_last_contetid_newest(uid)
+            
+            # ループ判定：取得可能なコンテンツ数と比較
+            from models.content_get import get_content_id_range
+            min_id, max_id, total_count = get_content_id_range(uid)
+            # 取得件数が少ない場合、または取得したIDが範囲外の場合はループした可能性
+            is_looped = (total_count > 0 and len(result) < 5) or \
+                       (min_id is not None and last_content_id < min_id) or \
+                       (max_id is not None and last_content_id > max_id)
+        
         return jsonify({
             "status": "success",
             "message": f"{len(result)}件のコンテンツを取得",
-            "data": result
+            "data": result,
+            "isLooped": is_looped if result else False
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
+        print("⚠️エラー(get_content_newest_api):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -817,26 +823,35 @@ def get_lastcontentid_newest():
 
 @content_bp.route('/getcontents/oldest', methods=['POST'])
 @jwt_required
-def get_content_oldest_5():
+def get_content_oldest_api():
+    """
+    古い順で5件取得（新着投稿があれば最後のキューに入れる、ループ対応）
+    最後まで行ったら最初に戻る
+    """
     try:
         uid = request.user["firebase_uid"]
-        rows = get_content_oldest_5(uid)
-        # Dartで扱いやすいように整形
+        
+        # 古い順で取得（新着投稿を最後のキューに）
+        rows = get_content_oldest_with_newest_queue(uid, limitnum=5)
+        
         result = []
-        # 既に取得したcontentIDを追跡（重複防止用）
-        fetched_content_ids = set()
-
+        min_content_id = None
+        max_content_id = None
+        
         for row in rows:
             content_id = row[13]
-            # 重複チェック
-            if content_id in fetched_content_ids:
-                continue
-            fetched_content_ids.add(content_id)
+            
+            # 最小・最大IDを記録（ループ判定用）
+            if min_content_id is None or content_id < min_content_id:
+                min_content_id = content_id
+            if max_content_id is None or content_id > max_content_id:
+                max_content_id = content_id
             
             # DBから取得したパスをCloudFront URLに正規化
             contentpath = normalize_content_url(row[1]) if row[1] else None
             thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
             iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+            
             result.append({
                 "title": row[0],
                 "contentpath": contentpath,
@@ -846,30 +861,152 @@ def get_content_oldest_5():
                 "playnum": row[4],
                 "link": row[5],
                 "username": row[6],
-                "user_id": row[7],  # userIDを追加
+                "user_id": row[7],
                 "iconimgpath": iconimgpath,
                 "spotlightflag": row[11],
-                "textflag":row[9],
-                "commentnum":row[12],
-                "contentID":row[13]
+                "textflag": row[9],
+                "commentnum": row[12],
+                "contentID": row[13]
             })
-            lastcontentid = row[13]
-
-        resultnum = len(result)
-        shortagenum = 5 - resultnum
         
-        if lastcontentid:
-            update_last_contetid(uid, lastcontentid)
-
+        # 最後のcontentIDを更新
+        if result:
+            last_content_id = result[-1]["contentID"]
+            update_last_contetid(uid, last_content_id)
+            
+            # ループ判定：取得可能なコンテンツ数と比較
+            from models.content_get import get_content_id_range
+            min_id, max_id, total_count = get_content_id_range(uid)
+            # 取得件数が少ない場合、または取得したIDが範囲外の場合はループした可能性
+            is_looped = (total_count > 0 and len(result) < 5) or \
+                       (min_id is not None and last_content_id < min_id) or \
+                       (max_id is not None and last_content_id > max_id)
+        
         return jsonify({
             "status": "success",
             "message": f"{len(result)}件のコンテンツを取得",
-            "data": result
+            "data": result,
+            "isLooped": is_looped if result else False
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
+        print("⚠️エラー(get_content_oldest_api):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+# ========================================
+# 完全ランダム取得API（ループ対応）
+# ========================================
+@content_bp.route('/getcontents/random', methods=['POST'])
+@jwt_required
+def get_content_random_api():
+    """
+    完全ランダムで5件取得（重複なし、ループ対応）
+    最後まで行ったら最初に戻る
+    """
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json() or {}
+        exclude_content_ids = data.get("excludeContentIDs", [])  # フロントから除外IDリストを受け取る
         
+        # ランダムで5件取得
+        rows = get_content_random_5(uid, exclude_content_ids=exclude_content_ids)
+        
+        result = []
+        fetched_content_ids = set()
+        min_content_id = None
+        max_content_id = None
+        
+        for row in rows:
+            content_id = row[13]
+            if content_id in fetched_content_ids:
+                continue
+            fetched_content_ids.add(content_id)
+            
+            # 最小・最大IDを記録（ループ判定用）
+            if min_content_id is None or content_id < min_content_id:
+                min_content_id = content_id
+            if max_content_id is None or content_id > max_content_id:
+                max_content_id = content_id
+            
+            # DBから取得したパスをCloudFront URLに正規化
+            contentpath = normalize_content_url(row[1]) if row[1] else None
+            thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+            iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+            
+            result.append({
+                "title": row[0],
+                "contentpath": contentpath,
+                "thumbnailpath": thumbnailpath,
+                "spotlightnum": row[2],
+                "posttimestamp": row[3].isoformat(),
+                "playnum": row[4],
+                "link": row[5],
+                "username": row[6],
+                "user_id": row[7],
+                "iconimgpath": iconimgpath,
+                "spotlightflag": row[11],
+                "textflag": row[9],
+                "commentnum": row[12],
+                "contentID": row[13]
+            })
+        
+        # 不足分がある場合、ループして最初から取得
+        if len(result) < 5:
+            # 既に取得したIDを除外して追加取得
+            additional_exclude = list(fetched_content_ids) + exclude_content_ids
+            additional_rows = get_content_random_5(uid, exclude_content_ids=additional_exclude)
+            
+            for row in additional_rows:
+                if len(result) >= 5:
+                    break
+                content_id = row[13]
+                if content_id in fetched_content_ids:
+                    continue
+                fetched_content_ids.add(content_id)
+                
+                contentpath = normalize_content_url(row[1]) if row[1] else None
+                thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
+                iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+                
+                result.append({
+                    "title": row[0],
+                    "contentpath": contentpath,
+                    "thumbnailpath": thumbnailpath,
+                    "spotlightnum": row[2],
+                    "posttimestamp": row[3].isoformat(),
+                    "playnum": row[4],
+                    "link": row[5],
+                    "username": row[6],
+                    "user_id": row[7],
+                    "iconimgpath": iconimgpath,
+                    "spotlightflag": row[11],
+                    "textflag": row[9],
+                    "commentnum": row[12],
+                    "contentID": row[13]
+                })
+        
+        # 最後のcontentIDを更新（ループ判定用）
+        if result:
+            last_content_id = result[-1]["contentID"]
+            update_last_contetid(uid, last_content_id)
+            
+            # ループ判定：取得可能なコンテンツ数と比較
+            from models.content_get import get_content_id_range
+            min_id, max_id, total_count = get_content_id_range(uid)
+            # 取得件数が少ない場合、または取得したIDが範囲外の場合はループした可能性
+            is_looped = (total_count > 0 and len(result) < 5) or \
+                       (min_id is not None and last_content_id < min_id) or \
+                       (max_id is not None and last_content_id > max_id)
+        
+        return jsonify({
+            "status": "success",
+            "message": f"{len(result)}件のコンテンツを取得",
+            "data": result,
+            "isLooped": is_looped if result else False
+        }), 200
+    except Exception as e:
+        print("⚠️エラー(get_content_random_api):", e)
+        return jsonify({"status": "error", "message": str(e)}), 400
 
 
 @content_bp.route('/getcontent', methods=['POST'])
