@@ -317,7 +317,6 @@ def content_detail():
         else:
             # 指定されたcontentIDを使用（後方互換性のため）
             nextcontentID = contentID
-            print(f"📌 指定コンテンツID: {nextcontentID}")
             detail = get_content_detail(nextcontentID)
             if not detail:
                 return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
@@ -671,7 +670,6 @@ def get_content_random_5():
                     "contentID":row[13]
                 })
                 lastcontentid = row[13]
-                print(row[13],":",row[0],"を取得")
                 shortagenum -= 1
                 
                 # 5件取得できたら終了
@@ -773,7 +771,6 @@ def get_content_newest_5():
                     "contentID":row[13]
                 })
                 lastcontentid = row[13]
-                print(row[13],":",row[0],"を取得")
                 shortagenum -= 1
                 
                 # 5件取得できたら終了
@@ -907,7 +904,6 @@ def get_content_designation():
                 "contentID":row[13]
             })
             lastcontentid = row[13]
-            print(row[13],":",row[0],"を取得")
         update_last_contetid(uid, lastcontentid)
 
         return jsonify({

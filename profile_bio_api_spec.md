@@ -138,7 +138,7 @@ POST /api/users/updatebio
 #### 追加するカラム
 
 ```sql
-ALTER TABLE users ADD COLUMN bio VARCHAR(200) DEFAULT NULL;
+ALTER TABLE user ADD COLUMN bio VARCHAR(200) DEFAULT NULL;
 ```
 
 #### テーブル構造（追加後）
