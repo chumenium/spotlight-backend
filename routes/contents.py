@@ -637,9 +637,10 @@ def get_content_random_5():
                 "contentID":row[13]
             })
             lastcontentid = row[13]
-            for i in range(len(result)):
-                print("ランダム取得したコンテンツ1")
-                print(result[i]["contentID"],result[i]["title"])
+        for i in range(len(result)):
+            print("ランダム取得したコンテンツ1")
+            print(result[i]["contentID"],result[i]["title"])
+        print("----------------------------------------------------------------------")
 
         resultnum = len(result)
         shortagenum = 5 - resultnum
@@ -680,13 +681,13 @@ def get_content_random_5():
                 lastcontentid = row[13]
                 print(row[13],":",row[0],"を取得")
                 shortagenum -= 1
-                for i in range(len(result)):
-                    print("ランダム取得したコンテンツ2")
-                    print(result[i]["contentID"],result[i]["title"])
+
                 # 5件取得できたら終了
                 if len(result) >= 5:
                     break
-            
+            for i in range(len(result)):
+                print("ランダム取得したコンテンツ2")
+                print(result[i]["contentID"],result[i]["title"])
             # 5件取得できたか、これ以上取得できない場合は終了
             if len(result) >= 5 or not rows2:
                 break
