@@ -718,11 +718,16 @@ def get_content_newest_api():
         rows = get_content_newest_with_priority(uid, limitnum=5)
         
         result = []
+        fetched_content_ids = set()
         min_content_id = None
         max_content_id = None
         
         for row in rows:
             content_id = row[13]
+            # 重複チェック
+            if content_id in fetched_content_ids:
+                continue
+            fetched_content_ids.add(content_id)
             
             # 最小・最大IDを記録（ループ判定用）
             if min_content_id is None or content_id < min_content_id:
@@ -751,58 +756,7 @@ def get_content_newest_api():
                 "commentnum": row[12],
                 "contentID": row[13]
             })
-<<<<<<< HEAD
-            lastcontentid = row[13]
 
-        resultnum = len(result)
-        shortagenum = 5 - resultnum
-        # 不足分がある場合、既に取得したcontentIDを除外して追加取得
-        while shortagenum > 0:
-            rows2 = get_content_newest_5(uid, limitnum=shortagenum)
-            if not rows2:
-                # これ以上取得できるコンテンツがない場合
-                break
-            
-            for row in rows2:
-                content_id = row[13]
-                # 重複チェック（念のため）
-                if content_id in fetched_content_ids:
-                    continue
-                fetched_content_ids.add(content_id)
-                
-                # DBから取得したパスをCloudFront URLに正規化
-                contentpath = normalize_content_url(row[1]) if row[1] else None
-                thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
-                iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
-                result.append({
-                    "title": row[0],
-                    "contentpath": contentpath,
-                    "thumbnailpath": thumbnailpath,
-                    "spotlightnum": row[2],
-                    "posttimestamp": row[3].isoformat(),
-                    "playnum": row[4],
-                    "link": row[5],
-                    "username": row[6],
-                    "user_id": row[7],  # userIDを追加
-                    "iconimgpath": iconimgpath,
-                    "spotlightflag": row[11],
-                    "textflag":row[9],
-                    "commentnum":row[12],
-                    "contentID":row[13]
-                })
-                lastcontentid = row[13]
-                shortagenum -= 1
-                
-                # 5件取得できたら終了
-                if len(result) >= 5:
-                    break
-            
-            # 5件取得できたか、これ以上取得できない場合は終了
-            if len(result) >= 5 or not rows2:
-                break
-=======
->>>>>>> 5971219a1e9011bb207b140d6d4c117b960850e3
-        
         # 不足分がある場合、ループして最初から取得
         if len(result) < 5:
             # 最小IDから取得（ループ）
