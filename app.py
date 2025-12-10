@@ -59,11 +59,13 @@ def create_app(config_name='production'):
     from routes.contents import content_bp
     from routes.users import users_bp
     from routes.delete import delete_bp
+    from routes.admin import admin_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(content_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(delete_bp)
+    app.register_blueprint(admin_bp)
 
     
     # ========================================
