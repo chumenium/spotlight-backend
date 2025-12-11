@@ -2,12 +2,34 @@ import psycopg2
 from models.connection_pool import get_connection, release_connection
 
 
-def get_recent_history_ids(uid):
+def get_recent_history_ids(uid, exclude_content_ids=None):
+    """
+    最近の再生履歴を除外してコンテンツを取得
+    スクロール中の重複取得を防ぐため、既に取得したコンテンツIDを除外可能
+    
+    Args:
+        uid: ユーザーID
+        exclude_content_ids: 除外するコンテンツIDのリスト（スクロール中の重複防止用）
+    """
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute("""
+            # パラメータ構築
+            params = [uid, uid, uid, uid, uid]
+            
+            # 除外IDの条件を追加
+            exclude_condition = ""
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                placeholders = ','.join(['%s'] * len(exclude_content_ids))
+                exclude_condition = f"""
+                        UNION
+                        SELECT contentID
+                        FROM (VALUES ({placeholders})) AS excluded(contentID)
+                """
+                params.extend(exclude_content_ids)
+            
+            query = """
                 SELECT c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
                     c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, c.textflag, c.thumbnailpath,
                     cu.spotlightflag, COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum, c.contentid
@@ -44,12 +66,20 @@ def get_recent_history_ids(uid):
                             FROM blocklist
                             WHERE blockedUserID = %s
                         )
+            """ + exclude_condition + """
                     ) p
                     WHERE p.contentID = c.contentID
                 )
-                ORDER BY RANDOM()
-                LIMIT 5;
-            """, (uid,uid,uid,uid,uid))
+            """
+            
+            # 除外IDがある場合は追加条件を適用
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                query += " AND c.contentID NOT IN (" + ','.join(['%s'] * len(exclude_content_ids)) + ")"
+                params.extend(exclude_content_ids)
+            
+            query += " ORDER BY RANDOM() LIMIT 5;"
+            
+            cur.execute(query, tuple(params))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
@@ -133,7 +163,7 @@ def update_last_contetid(uid,contentid):
                 WHERE userID = %s;
             """, (contentid,uid))
         conn.commit()
-        print("✅ 最終コンテンツID更新",contentid)
+        # デバッグ用のprint文を削除（コスト削減のため）
     except psycopg2.Error as e:
         print("❌ データベースエラー:", e)
     finally:
@@ -440,11 +470,16 @@ def get_content_id_range(uid):
             release_connection(conn)
 
 # 新着順：新着投稿を優先的に取得（最適化版・ループ対応）
-def get_content_newest_with_priority(uid, limitnum=5):
+def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
     """
     新着投稿を優先的に取得。新着投稿がない場合は通常の新着順で取得
     ループ対応（最後まで行ったら最初に戻る）
     最適化: CTE使用、UNION ALLで1クエリに統合、コメント数はLEFT JOIN
+    
+    Args:
+        uid: ユーザーID
+        limitnum: 取得件数
+        exclude_content_ids: 除外するコンテンツIDのリスト（スクロール中の重複防止用）
     """
     conn = None
     try:
@@ -458,6 +493,12 @@ def get_content_newest_with_priority(uid, limitnum=5):
             
             # UNION ALLで新着投稿と通常の新着順を1クエリで取得
             params = [uid, uid]  # blocked_users CTE用
+            
+            # 除外IDの条件を構築
+            exclude_condition = ""
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                placeholders = ','.join(['%s'] * len(exclude_content_ids))
+                exclude_condition = f" AND c.contentID NOT IN ({placeholders})"
             
             # クエリパーツを構築
             query_parts = []
@@ -484,8 +525,10 @@ def get_content_newest_with_priority(uid, limitnum=5):
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid, LMcontentID])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             
             # 通常の新着順の条件（優先度2）
             if lastcontetid:
@@ -509,8 +552,10 @@ def get_content_newest_with_priority(uid, limitnum=5):
                     WHERE c.contentID < %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid, lastcontetid])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             else:
                 # lastcontetidがない場合は最初から取得
                 query_parts.append("""
@@ -532,8 +577,10 @@ def get_content_newest_with_priority(uid, limitnum=5):
                     ) comment_counts ON c.contentID = comment_counts.contentID
                     WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             
             # クエリが空の場合は空の結果を返す
             if not query_parts:
@@ -562,11 +609,16 @@ def get_content_newest_with_priority(uid, limitnum=5):
             release_connection(conn)
 
 # 古い順：新着投稿を最後のキューに入れる（最適化版・ループ対応）
-def get_content_oldest_with_newest_queue(uid, limitnum=5):
+def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=None):
     """
     古い順で取得。新着投稿があれば最後のキューに入れる
     ループ対応（最後まで行ったら最初に戻る）
     最適化: CTE使用、UNION ALLで1クエリに統合、コメント数はLEFT JOIN
+    
+    Args:
+        uid: ユーザーID
+        limitnum: 取得件数
+        exclude_content_ids: 除外するコンテンツIDのリスト（スクロール中の重複防止用）
     """
     conn = None
     try:
@@ -579,6 +631,12 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5):
             LMcontentID = user_state[1] if user_state and user_state[1] else None
             
             params = [uid, uid]  # blocked_users CTE用
+            
+            # 除外IDの条件を構築
+            exclude_condition = ""
+            if exclude_content_ids and len(exclude_content_ids) > 0:
+                placeholders = ','.join(['%s'] * len(exclude_content_ids))
+                exclude_condition = f" AND c.contentID NOT IN ({placeholders})"
             
             # クエリパーツを構築
             query_parts = []
@@ -605,8 +663,10 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5):
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid, lastcontetid])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             else:
                 # lastcontetidがない場合は最初から取得
                 query_parts.append("""
@@ -628,8 +688,10 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5):
                     ) comment_counts ON c.contentID = comment_counts.contentID
                     WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             
             # 新着投稿を最後のキューに（優先度2）
             if LMcontentID:
@@ -653,8 +715,10 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5):
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """)
+                """ + exclude_condition)
                 params.extend([uid, LMcontentID])
+                if exclude_content_ids and len(exclude_content_ids) > 0:
+                    params.extend(exclude_content_ids)
             
             # クエリが空の場合は空の結果を返す
             if not query_parts:

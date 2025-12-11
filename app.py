@@ -27,10 +27,9 @@ try:
     if not firebase_admin._apps:
         cred = credentials.Certificate(cred_path)
         firebase_admin.initialize_app(cred)
-        print("✅ Firebase Admin initialized.")
 
 except Exception as e:
-    print(f"❌ Firebase 初期化エラー: {e}")
+    pass
 
 
 # ========================================
@@ -48,9 +47,8 @@ def create_app(config_name='production'):
     # DB 接続プール
     try:
         init_connection_pool()
-        print("✅ Connection pool initialized.")
     except Exception as e:
-        print(f"❌ Connection pool 初期化エラー: {e}")
+        pass
 
     # ========================================
     # Blueprint 読込
@@ -110,5 +108,4 @@ app = create_app(os.getenv("FLASK_ENV", "production"))
 # （EC2本番では絶対に実行しない）
 # ========================================
 if __name__ == "__main__":
-    print("🚧 Development server mode")
     app.run(host="127.0.0.1", port=5000, debug=True)

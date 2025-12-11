@@ -20,9 +20,6 @@ def init_connection_pool():
             port=os.getenv("DB_PORT"),
             database=os.getenv("DB_NAME")
         )
-        print("✅ Connection pool created")
-    else:
-        print("ℹ️ Connection pool already exists")
 
 def get_connection():
     """プールからコネクションを取得"""
@@ -39,4 +36,3 @@ def close_all_connections():
     """アプリ終了時に全コネクションを閉じる"""
     if connection_pool:
         connection_pool.closeall()
-        print("🛑 All connections closed")

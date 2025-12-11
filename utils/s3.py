@@ -68,7 +68,6 @@ def upload_to_s3(file_data, folder, filename, content_type='application/octet-st
         except Exception as acl_error:
             # ACLが無効化されている場合はACLなしで再試行
             if 'AccessControlListNotSupported' in str(acl_error) or 'InvalidArgument' in str(acl_error):
-                print(f"⚠️ ACLが無効化されているため、ACLなしでアップロードします: {key}")
                 s3.put_object(
                     Bucket=bucket,
                     Key=key,
@@ -81,7 +80,6 @@ def upload_to_s3(file_data, folder, filename, content_type='application/octet-st
         return key
     
     except Exception as e:
-        print(f"⚠️ S3アップロードエラー: {e}")
         raise
 
 
@@ -128,8 +126,12 @@ def normalize_content_url(path):
     
     path = path.strip()
     
-    # 既に絶対URL（CloudFront URLまたはS3 URL）の場合はそのまま返す
+    # 既に絶対URL（CloudFront URLまたはS3 URL）の場合はそのまま返す（早期リターンで最適化）
     if path.startswith('http://') or path.startswith('https://'):
+        return path
+    
+    # テキスト投稿の場合はそのまま返す（早期リターンで最適化）
+    if not path.startswith('/'):
         return path
     
     # アイコンパスの場合、CloudFront URLに変換
@@ -202,13 +204,11 @@ def list_s3_content_files(folders=None, bucket_name=None):
                                 'key': key
                             })
             except Exception as e:
-                print(f"⚠️ S3リスト取得エラー ({folder}): {e}")
                 continue
         
         return all_files
     
     except Exception as e:
-        print(f"⚠️ S3リスト取得エラー: {e}")
         return []
 
 
@@ -345,18 +345,9 @@ def delete_from_s3(key, bucket_name=None):
 
         s3.delete_object(Bucket=bucket, Key=key)
 
-        print(f"🗑️ S3削除成功: bucket={bucket}, key={key}")
         return True
 
     except Exception as e:
-        error_msg = str(e)
-        # AccessDeniedエラーの場合は詳細なメッセージを出力
-        if 'AccessDenied' in error_msg:
-            print(f"❌ S3削除エラー（権限不足）: bucket={bucket}, key={key}")
-            print(f"   IAMユーザーに s3:DeleteObject 権限が必要です")
-            print(f"   エラー詳細: {error_msg}")
-        else:
-            print(f"❌ S3削除エラー: {error_msg} (bucket={bucket}, key={key})")
         return False
 
 
@@ -368,7 +359,6 @@ def delete_file_from_url(url):
     """
     key = extract_s3_key_from_url(url)
     if not key:
-        print(f"⚠️ URL から S3 key を抽出できませんでした: {url}")
         return False
 
     # 全て spotlight-contents バケットに統一

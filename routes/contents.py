@@ -3,7 +3,7 @@
 """
 # from turtle import title
 from flask import Blueprint, request, jsonify
-from utils.auth import jwt_required
+from utils.auth import jwt_required, debounce_request
 from models.updatedata import spotlight_on, spotlight_off,add_playnum
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
@@ -73,10 +73,8 @@ def compress_video_if_needed(file_binary, max_bitrate=MAX_BITRATE):
 
     # 現在のビットレート取得
     bitrate = get_video_bitrate(input_path)
-    print(f"🔍 現在のビットレート: {bitrate}")
 
     if bitrate and bitrate > max_bitrate:
-        print("⚠️ ビットレートが高すぎます → 再エンコード実行")
 
         # ffmpegで7000kbpsに変換
         cmd = [
@@ -92,16 +90,13 @@ def compress_video_if_needed(file_binary, max_bitrate=MAX_BITRATE):
         # 変換後ファイルを読み込み
         with open(output_path, "rb") as f:
             new_binary = f.read()
-        print("7000kbpsに変換成功")
         # 一時ファイル削除
         os.remove(input_path)
         os.remove(output_path)
-        print("一時ファイル削除")
 
         return new_binary  # 変換後バイナリを返す
 
     # 変換不要なら元のバイナリ返す
-    print("ビットレートに問題無し(元のファイルを返す)")
     os.remove(input_path)
     return file_binary
 
@@ -123,7 +118,7 @@ def add_content():
         title = data.get("title")
         link = data.get("link")
         tag = data.get("tag")
-        print("tag:",tag)
+        # デバッグ用のprint文を削除（コスト削減のため）
         if not(tag == None):
             tag = tag.replace("#", "")
         if content_type != "text":
@@ -233,7 +228,6 @@ def add_content():
             }), 200
 
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 # ===============================
@@ -263,7 +257,6 @@ def add_comment():
             if posted_by_user_data["notificationenabled"]:
                 if uid != posted_by_user_data["userID"]:
                     send_push_notification(posted_by_user_data["token"], post_username+"さんが返信を投稿",commenttext)
-                    print(f"{posted_by_user_data['username']}に通知を送信")
             if uid != posted_by_user_data["userID"]:
                 insert_notification(userID=posted_by_user_data["userID"],comCTID=contentID,comCMID=commentid)
         else:
@@ -278,13 +271,11 @@ def add_comment():
                 title = content_user_data["title"]
                 if uid != content_user_data["userID"]:
                     send_push_notification(content_user_data["token"], post_username+"さんがコメントを投稿",title+":"+commenttext)
-                    print(f"{content_user_data['username']}に通知を送信")
             if uid != content_user_data["userID"]:
                 insert_notification(userID=content_user_data['userID'],comCTID=contentID,comCMID=commentid)
 
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -293,6 +284,7 @@ def add_comment():
 # ===============================
 @content_bp.route('/detail', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=0.5)  # 0.5秒以内の重複リクエストを無視
 def content_detail():
     try:
         uid = request.user["firebase_uid"]
@@ -307,15 +299,11 @@ def content_detail():
             nextcontentID = get_random_content_id()
             
             if not nextcontentID:
-                print("⚠️ データベースからランダムコンテンツが取得できませんでした")
                 return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
-            
-            print(f"🎲 データベースからランダムコンテンツ取得: contentID={nextcontentID}")
             
             # データベースからコンテンツ詳細を取得
             detail = get_content_detail(nextcontentID)
             if not detail:
-                print(f"⚠️ コンテンツ詳細が取得できませんでした: contentID={nextcontentID}")
                 return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
         else:
             # 指定されたcontentIDを使用（後方互換性のため）
@@ -324,7 +312,6 @@ def content_detail():
             if not detail:
                 return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
         
-        print(f"📋 コンテンツ詳細取得結果: {detail is not None}")
 
         # nextcontentIDがNoneの場合はspotlightflagをFalseに設定
         if nextcontentID is not None:
@@ -336,9 +323,7 @@ def content_detail():
         contentpath = normalize_content_url(detail[1]) if detail[1] else None
         thumbnailpath = normalize_content_url(detail[9]) if len(detail) > 9 and detail[9] else None
         
-        print("username:",detail[6])
-        print("contentpath:",contentpath)
-        print("thumbnailpath:",thumbnailpath)
+        # デバッグ用のprint文を削除（コスト削減のため）
         commentnum = get_comment_num(nextcontentID)
         
         # アイコンパスをCloudFront URLに正規化
@@ -363,7 +348,6 @@ def content_detail():
             }
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -381,7 +365,6 @@ def playnum_add_route():
         insert_play_history(userID=uid,contentID=contentID)
         return jsonify({"status": "success", "message": "再生回数を追加"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -403,12 +386,10 @@ def spotlight_on_route():
             title = content_user_data["title"]
             if uid != content_user_data["userID"]:
                 send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
-                print(f"{content_user_data['username']}に通知を送信")
         if  uid != content_user_data["userID"]:
             insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -425,7 +406,6 @@ def spotlight_off_route():
         spotlight_off(contentID, uid)
         return jsonify({"status": "success", "message": "スポットライトをOFFにしました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -475,7 +455,6 @@ def get_comments():
         }), 200
 
     except Exception as e:
-        print("⚠️エラー(get_comments):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -491,7 +470,6 @@ def create_playlist():
         insert_playlist(uid, title)
         return jsonify({"status": "success", "message": "プレイリストを作成しました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #プレイリストにコンテンツ追加
@@ -506,7 +484,6 @@ def add_content_in_playlist():
         insert_playlist_detail(uid, playlistid, contentid)
         return jsonify({"status": "success", "message": "プレイリストにコンテンツを追加しました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -520,7 +497,6 @@ def get_playlist():
         result = get_playlists_with_thumbnail(uid)
         return jsonify({"status": "success", "playlist": result}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -549,7 +525,6 @@ def get_playlistdetail():
 
         return jsonify({"status": "success", "data": contents}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #検索機能
@@ -591,17 +566,21 @@ def serch():
             "data": result
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
         
 
 #コンテンツのランダム取得API
 @content_bp.route('/getcontents', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=2.0)  # 2秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_random_5():
     try:
         uid = request.user["firebase_uid"]
-        rows = get_recent_history_ids(uid)
+        data = request.get_json() or {}
+        # スクロール中の重複取得を防ぐため、既に取得したコンテンツIDを除外
+        exclude_content_ids = data.get("excludeContentIDs", [])
+        
+        rows = get_recent_history_ids(uid, exclude_content_ids=exclude_content_ids)
         lastcontentid = None
         # Dartで扱いやすいように整形
         result = []
@@ -636,10 +615,7 @@ def get_content_random_5():
                 "contentID":row[13]
             })
             lastcontentid = row[13]
-        for i in range(len(result)):
-            print("ランダム取得したコンテンツ1")
-            print(result[i]["contentID"],result[i]["title"])
-        print("----------------------------------------------------------------------")
+        # デバッグ用のprint文を削除（コスト削減のため）
 
         resultnum = len(result)
         shortagenum = 5 - resultnum
@@ -683,9 +659,7 @@ def get_content_random_5():
                 # 5件取得できたら終了
                 if len(result) >= 5:
                     break
-            for i in range(len(result)):
-                print("ランダム取得したコンテンツ2")
-                print(result[i]["contentID"],result[i]["title"])
+            # デバッグ用のprint文を削除（コスト削減のため）
             # 5件取得できたか、これ以上取得できない場合は終了
             if len(result) >= 5 or not rows2:
                 break
@@ -699,13 +673,13 @@ def get_content_random_5():
             "data": result
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
 #コンテンツを新しい順で取得
 @content_bp.route('/getcontents/newest', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=2.0)  # 2秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_newest_api():
     """
     新着順で5件取得（新着投稿を優先的に表示、ループ対応）
@@ -713,9 +687,12 @@ def get_content_newest_api():
     """
     try:
         uid = request.user["firebase_uid"]
+        data = request.get_json() or {}
+        # スクロール中の重複取得を防ぐため、既に取得したコンテンツIDを除外
+        exclude_content_ids = data.get("excludeContentIDs", [])
         
-        # 新着投稿を優先的に取得
-        rows = get_content_newest_with_priority(uid, limitnum=5)
+        # 新着投稿を優先的に取得（除外IDを考慮）
+        rows = get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=exclude_content_ids)
         
         result = []
         fetched_content_ids = set()
@@ -811,7 +788,6 @@ def get_content_newest_api():
             "isLooped": is_looped if result else False
         }), 200
     except Exception as e:
-        print("⚠️エラー(get_content_newest_api):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -827,7 +803,6 @@ def get_lastcontentid_newest():
             "message": "最終読み込みコンテンツの初期化完了"
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
         
 
@@ -835,6 +810,7 @@ def get_lastcontentid_newest():
 
 @content_bp.route('/getcontents/oldest', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=2.0)  # 2秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_oldest_api():
     """
     古い順で5件取得（新着投稿があれば最後のキューに入れる、ループ対応）
@@ -842,9 +818,12 @@ def get_content_oldest_api():
     """
     try:
         uid = request.user["firebase_uid"]
+        data = request.get_json() or {}
+        # スクロール中の重複取得を防ぐため、既に取得したコンテンツIDを除外
+        exclude_content_ids = data.get("excludeContentIDs", [])
         
-        # 古い順で取得（新着投稿を最後のキューに）
-        rows = get_content_oldest_with_newest_queue(uid, limitnum=5)
+        # 古い順で取得（新着投稿を最後のキューに、除外IDを考慮）
+        rows = get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=exclude_content_ids)
         
         result = []
         min_content_id = None
@@ -901,7 +880,6 @@ def get_content_oldest_api():
             "isLooped": is_looped if result else False
         }), 200
     except Exception as e:
-        print("⚠️エラー(get_content_oldest_api):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -910,6 +888,7 @@ def get_content_oldest_api():
 # ========================================
 @content_bp.route('/getcontents/random', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=2.0)  # 2秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_random_api():
     """
     完全ランダムで5件取得（重複なし、ループ対応）
@@ -1017,7 +996,6 @@ def get_content_random_api():
             "isLooped": is_looped if result else False
         }), 200
     except Exception as e:
-        print("⚠️エラー(get_content_random_api):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -1064,6 +1042,5 @@ def get_content_designation():
             "data": result
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
         

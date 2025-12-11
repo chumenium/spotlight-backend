@@ -35,10 +35,6 @@ def get_username():
         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
         from utils.s3 import normalize_content_url
         normalized_iconpath = normalize_content_url(iconimgpath) if iconimgpath else None
-        
-        print(uid)
-        print(username)
-        print(f"アイコンパス: {iconimgpath} -> {normalized_iconpath}")
         return jsonify({
             "status": "success",
             "data": {
@@ -50,7 +46,6 @@ def get_username():
             }
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -68,7 +63,6 @@ def get_searchhistory():
             "data": searchhistory
         }), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -83,7 +77,6 @@ def enable_user_notification():
         enable_notification(uid)
         return jsonify({"status": "success", "message": "通知をONにしました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -98,7 +91,6 @@ def disable_user_notification():
         disable_notification(uid)
         return jsonify({"status": "success", "message": "通知をOFFにしました"}), 200
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 # ===============================
@@ -129,7 +121,6 @@ def get_user_contents_list():
         return jsonify({"status": "success", "data": contents}), 200
 
     except Exception as e:
-        print("⚠️エラー(get_user_contents_list):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -161,7 +152,6 @@ def get_spotlight_contents_list():
         return jsonify({"status": "success", "data": contents}), 200
 
     except Exception as e:
-        print("⚠️エラー(get_spotlight_contents_list):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -192,7 +182,6 @@ def get_play_history_list():
         return jsonify({"status": "success", "data": contents}), 200
 
     except Exception as e:
-        print("⚠️エラー(get_play_history_list):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -206,7 +195,6 @@ def get_prolile_data():
         return jsonify({"status": "success", "spotlightnum": spotlightnum}), 200
 
     except Exception as e:
-        print("⚠️エラー(get_play_history_list):", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -235,7 +223,6 @@ def update_bio_api():
         }), 200
         
     except Exception as e:
-        print("⚠️エラー(update_bio_api):", e)
         return jsonify({
             "status": "error",
             "message": "サーバーエラーが発生しました"
@@ -273,12 +260,9 @@ def change_icon():
             if not is_default_icon:
                 try:
                     delete_file_from_url(old_icon_url)
-                    print(f"🗑️ 古いアイコンファイルを削除: {old_icon_url} (key: {old_icon_key})")
                 except Exception as e:
                     # S3削除エラーは無視（ファイルが既に存在しない場合など）
-                    print(f"⚠️ 古いアイコン削除エラー（無視）: {e}")
-            else:
-                print(f"ℹ️ default_icon.pngは削除しません: {old_icon_url} (key: {old_icon_key})")
+                    pass
         
         # fileが空文字列、None、または空の場合はデフォルトアイコンに設定
         if file and file.strip() and file != "default_icon.jpg":
@@ -305,10 +289,8 @@ def change_icon():
             # デフォルトアイコンの場合（fileが空、None、またはdefault_icon.jpgの場合）
             filename = "default_icon.png"
             iconimgpath = get_cloudfront_url("icon", filename)
-            print(f"📸 デフォルトアイコンに設定: {iconimgpath}")
 
         # ===== DBにCloudFront URLを保存 =====
-        print(f"📸 アイコンアップロード完了: {iconimgpath}")
         chenge_icon(uid, iconimgpath)
         
         return jsonify({
@@ -318,7 +300,6 @@ def change_icon():
         }), 200
 
     except Exception as e:
-        print("⚠️エラー(change_icon):", e)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -416,7 +397,6 @@ def get_notification_api():
         return jsonify({"status": "success", "data": notification_list}), 200
 
     except Exception as e:
-        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -431,7 +411,6 @@ def get_unloaded_num_api():
         num = get_unloaded_num(uid)
         return jsonify({"status": "success", "num": num}), 200
     except Exception as e:
-        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -457,7 +436,6 @@ def send_report_api():
             commentid = data.get("commentID")
             insert_report(reporttype=rtype, reportuidID=uid, comCTID=contentid2, comCMID=commentid, reason=reason, detail=detail)
         else:
-            print("⚠️不適切なtypeです:")
             return jsonify({
                 "status": "error",
                 "message": str("inappropriate report type")
@@ -467,7 +445,6 @@ def send_report_api():
                 "message": "通報を送信しました"
         }), 200
     except Exception as e:
-        print("⚠️通報送信エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -482,7 +459,6 @@ def get_spotlight_num_api():
         num = get_spotlight_num(uid)
         return jsonify({"status": "success", "num": num}), 200
     except Exception as e:
-        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
@@ -523,7 +499,6 @@ def get_user_home_api():
         }
         return jsonify({"status": "success", "data": data}), 200
     except Exception as e:
-        print("⚠️通知取得エラー:", e)
         return jsonify({
             "status": "error",
             "message": str(e)
