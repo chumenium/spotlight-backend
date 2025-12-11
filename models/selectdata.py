@@ -763,6 +763,25 @@ def get_bio_by_username(username):
         if conn:
             release_connection(conn)
 
+
+
+def get_notified(contentid, uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT notified FROM contentuser WHERE contentID = %s AND userID = %s', (contentid,uid))
+            row = cur.fetchone()
+        if row:
+            return row[0]
+        return None
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return None
+    finally:
+        if conn:
+            release_connection(conn)
+
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")
