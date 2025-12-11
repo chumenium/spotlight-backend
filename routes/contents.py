@@ -356,13 +356,18 @@ def content_detail():
 #===============================
 @content_bp.route('/playnum', methods=['POST'])
 @jwt_required
+@debounce_request(ttl=1.0)  # 1秒以内の重複リクエストを無視（スクロール中の重複呼び出しを防ぐ）
 def playnum_add_route():
     try:
         uid = request.user["firebase_uid"]
         data = request.get_json()
         contentID = data.get("contentID")
+        
+        if not contentID:
+            return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
+        
         add_playnum(contentID)
-        insert_play_history(userID=uid,contentID=contentID)
+        insert_play_history(userID=uid, contentID=contentID)
         return jsonify({"status": "success", "message": "再生回数を追加"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400

@@ -124,18 +124,31 @@ def insert_search_history(userID, serchword):
 #実装済み
 #----------------再生履歴を追加----------------
 def insert_play_history(userID, contentID):
-    """再生履歴を追加"""
+    """再生履歴を追加（重複チェック付き）"""
+    conn = None
     try:
         conn = get_connection()
         cur = conn.cursor()
+        # 重複チェック：既に同じユーザー・コンテンツの再生履歴が存在するか確認
         cur.execute("""
-            INSERT INTO playhistory (userID, contentID)
-            VALUES (%s, %s);
+            SELECT playID FROM playhistory 
+            WHERE userID = %s AND contentID = %s 
+            ORDER BY playID DESC LIMIT 1
         """, (userID, contentID))
-        conn.commit()
-        print(f"✅ 再生履歴を追加しました。")
+        existing = cur.fetchone()
+        
+        # 重複がない場合のみ追加
+        if not existing:
+            cur.execute("""
+                INSERT INTO playhistory (userID, contentID)
+                VALUES (%s, %s);
+            """, (userID, contentID))
+            conn.commit()
+        # デバッグ用のprint文を削除（コスト削減のため）
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        # データベースエラーは無視（重複エラーなどは正常な動作）
+        if conn:
+            conn.rollback()
     finally:
         if conn:
             release_connection(conn)

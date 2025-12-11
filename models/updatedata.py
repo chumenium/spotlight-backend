@@ -147,9 +147,11 @@ def add_playnum(contentID):
                 WHERE contentID = %s;
             """, (contentID,))
         conn.commit()
-        print(f"Add play count")
+        # デバッグ用のprint文を削除（コスト削減のため）
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        # データベースエラーは無視（ログ削減のため）
+        if conn:
+            conn.rollback()
     finally:
         if conn:
             release_connection(conn)
