@@ -255,3 +255,8 @@ ADD COLUMN processflag BOOLEAN DEFAULT FALSE;
 
 ALTER TABLE "user"
 ADD COLUMN LMcontentID INTEGER;
+
+ALTER TABLE contentuser RENAME COLUMN bookmarkflag TO notified;
+ALTER TABLE serchhistory
+ADD CONSTRAINT serchhistory_user_word_unique
+UNIQUE (userID, serchword);

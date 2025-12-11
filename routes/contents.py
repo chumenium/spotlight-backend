@@ -8,7 +8,7 @@ from models.updatedata import spotlight_on, spotlight_off,add_playnum
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
     get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
-    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num
+    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num, get_notified
 )
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -402,8 +402,10 @@ def spotlight_on_route():
         if content_user_data["notificationenabled"]:
             title = content_user_data["title"]
             if uid != content_user_data["userID"]:
-                send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
-                print(f"{content_user_data['username']}に通知を送信")
+                #スポットライトオンオフを連打しても通知を一度だけにする
+                if get_notified(contentid=contentID, uid=content_user_data["userID"]):
+                    send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
+                    print(f"{content_user_data['username']}に通知を送信")
         if  uid != content_user_data["userID"]:
             insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200

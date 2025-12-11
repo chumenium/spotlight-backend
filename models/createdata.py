@@ -115,7 +115,7 @@ def insert_search_history(userID, serchword):
         conn.commit()
         print(f"✅ 検索履歴を追加しました。")
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        print("同じ検索ワードが既に存在する:", e)
     finally:
         if conn:
             release_connection(conn)
