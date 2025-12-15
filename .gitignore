@@ -5,7 +5,7 @@ ENV/
 .venv/
 
 # 環境変数ファイル（個人設定）
-#.env
+.env
 
 # Python キャッシュ
 __pycache__/

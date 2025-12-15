@@ -25,10 +25,6 @@ JWT_SECRET = os.getenv("JWT_SECRET")
 JWT_ALGORITHM = os.getenv("JWT_ALGORITHM")
 JWT_EXP_HOURS = 24
 
-if JWT_ALGORITHM != None and JWT_SECRET != None:
-    print("✅ envfile read successfully")
-else:
-    print("⚠️ envfile read エラー")
 
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api/auth')
@@ -70,7 +66,6 @@ def handle_firebase_auth():
         })
 
     except Exception as e:
-        print("🔥 Firebase認証エラー:", e)
         return jsonify({"error": str(e)}), 400
 
 
@@ -101,6 +96,5 @@ def update_token():
 
         return jsonify({"status": "updated"})
     except Exception as e:
-        print("エラー:", e)
         return jsonify({"error": str(e)}), 400
 
