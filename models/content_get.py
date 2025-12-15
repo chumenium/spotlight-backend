@@ -364,6 +364,7 @@ def get_content_oldest_5(uid):
 def _get_blocked_users_cte():
     """
     ブロックリストを取得するCTE（Common Table Expression）
+    両方向ブロック（自分がブロックしたユーザー + 自分をブロックしたユーザー）
     パフォーマンス向上のため、サブクエリをCTEに変更
     """
     return """
@@ -378,12 +379,27 @@ def _get_blocked_users_cte():
         )
     """
 
+def _get_one_way_blocked_users_cte():
+    """
+    片方向ブロックリストを取得するCTE（Common Table Expression）
+    自分がブロックしたユーザーのみを除外
+    パフォーマンス向上のため、サブクエリをCTEに変更
+    """
+    return """
+        WITH blocked_users AS (
+            SELECT blockedUserID AS userID
+            FROM blocklist
+            WHERE userID = %s
+        )
+    """
+
 # ========================================
 # 完全ランダム取得（最適化版）
 # ========================================
 def get_content_random_5(uid, exclude_content_ids=None):
     """
     完全ランダムで5件取得（重複なし、ループ対応）
+    片方向ブロック（自分がブロックしたユーザーのみ除外）
     最適化: CTE使用、コメント数はLEFT JOINで取得
     """
     conn = None
@@ -391,7 +407,7 @@ def get_content_random_5(uid, exclude_content_ids=None):
         conn = get_connection()
         with conn.cursor() as cur:
             # パラメータ構築
-            params = [uid, uid]  # blocked_users CTE用
+            params = [uid]  # blocked_users CTE用（片方向ブロック）
             
             # 除外IDの条件
             exclude_condition = ""
@@ -402,7 +418,7 @@ def get_content_random_5(uid, exclude_content_ids=None):
             
             params.extend([uid])  # contentuser JOIN用
             
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT 
                     c.title, 
                     c.contentpath, 
@@ -447,19 +463,20 @@ def get_content_random_5(uid, exclude_content_ids=None):
 def get_content_id_range(uid):
     """
     ユーザーが閲覧可能なコンテンツの最小・最大contentIDを取得
+    片方向ブロック（自分がブロックしたユーザーのみ除外）
     最適化: CTE使用
     """
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT MIN(c.contentID), MAX(c.contentID), COUNT(*)
                 FROM content c
                 WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                 AND c.userID NOT IN (SELECT userID FROM blocked_users)
             """
-            cur.execute(query, (uid, uid))
+            cur.execute(query, (uid,))
             row = cur.fetchone()
         return (row[0], row[1], row[2]) if row else (None, None, 0)
     except psycopg2.Error as e:
@@ -474,6 +491,8 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
     """
     新着投稿を優先的に取得。新着投稿がない場合は通常の新着順で取得
     ループ対応（最後まで行ったら最初に戻る）
+    片方向ブロック（自分がブロックしたユーザーのみ除外）
+    視聴履歴直近50件を除外
     最適化: CTE使用、UNION ALLで1クエリに統合、コメント数はLEFT JOIN
     
     Args:
@@ -492,13 +511,31 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
             LMcontentID = user_state[1] if user_state and user_state[1] else None
             
             # UNION ALLで新着投稿と通常の新着順を1クエリで取得
-            params = [uid, uid]  # blocked_users CTE用
+            params = [uid]  # blocked_users CTE用（片方向ブロック）
             
             # 除外IDの条件を構築
             exclude_condition = ""
             if exclude_content_ids and len(exclude_content_ids) > 0:
                 placeholders = ','.join(['%s'] * len(exclude_content_ids))
                 exclude_condition = f" AND c.contentID NOT IN ({placeholders})"
+            
+            # 視聴履歴直近50件の除外条件
+            history_exclude_condition = """
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM (
+                        SELECT DISTINCT contentID
+                        FROM (
+                            SELECT contentID
+                            FROM playhistory
+                            WHERE userID = %s
+                            ORDER BY playid DESC
+                            LIMIT 50
+                        ) AS recent_history
+                    ) ph
+                    WHERE ph.contentID = c.contentID
+                )
+            """
             
             # クエリパーツを構築
             query_parts = []
@@ -525,8 +562,8 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid, LMcontentID])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, LMcontentID, uid])  # contentuser JOIN, LMcontentID, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             
@@ -552,8 +589,8 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
                     WHERE c.contentID < %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid, lastcontetid])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, lastcontetid, uid])  # contentuser JOIN, lastcontetid, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             else:
@@ -577,8 +614,8 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
                     ) comment_counts ON c.contentID = comment_counts.contentID
                     WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, uid])  # contentuser JOIN, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             
@@ -587,7 +624,7 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
                 return []
             
             # クエリ構築
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT * FROM (
             """ + " UNION ALL ".join(query_parts) + """
                 ) combined
@@ -613,6 +650,8 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
     """
     古い順で取得。新着投稿があれば最後のキューに入れる
     ループ対応（最後まで行ったら最初に戻る）
+    片方向ブロック（自分がブロックしたユーザーのみ除外）
+    視聴履歴直近50件を除外
     最適化: CTE使用、UNION ALLで1クエリに統合、コメント数はLEFT JOIN
     
     Args:
@@ -630,13 +669,31 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
             lastcontetid = user_state[0] if user_state and user_state[0] else None
             LMcontentID = user_state[1] if user_state and user_state[1] else None
             
-            params = [uid, uid]  # blocked_users CTE用
+            params = [uid]  # blocked_users CTE用（片方向ブロック）
             
             # 除外IDの条件を構築
             exclude_condition = ""
             if exclude_content_ids and len(exclude_content_ids) > 0:
                 placeholders = ','.join(['%s'] * len(exclude_content_ids))
                 exclude_condition = f" AND c.contentID NOT IN ({placeholders})"
+            
+            # 視聴履歴直近50件の除外条件
+            history_exclude_condition = """
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM (
+                        SELECT DISTINCT contentID
+                        FROM (
+                            SELECT contentID
+                            FROM playhistory
+                            WHERE userID = %s
+                            ORDER BY playid DESC
+                            LIMIT 50
+                        ) AS recent_history
+                    ) ph
+                    WHERE ph.contentID = c.contentID
+                )
+            """
             
             # クエリパーツを構築
             query_parts = []
@@ -663,8 +720,8 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid, lastcontetid])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, lastcontetid, uid])  # contentuser JOIN, lastcontetid, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             else:
@@ -688,8 +745,8 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
                     ) comment_counts ON c.contentID = comment_counts.contentID
                     WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, uid])  # contentuser JOIN, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             
@@ -715,8 +772,8 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
                     WHERE c.contentID > %s
                     AND (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
-                """ + exclude_condition)
-                params.extend([uid, LMcontentID])
+                """ + history_exclude_condition + exclude_condition)
+                params.extend([uid, LMcontentID, uid])  # contentuser JOIN, LMcontentID, playhistory
                 if exclude_content_ids and len(exclude_content_ids) > 0:
                     params.extend(exclude_content_ids)
             
@@ -725,7 +782,7 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
                 return []
             
             # クエリ構築
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT * FROM (
             """ + " UNION ALL ".join(query_parts) + """
                 ) combined
@@ -739,7 +796,7 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
             
             # 不足分がある場合、ループして最初から取得
             if len(rows) < limitnum:
-                loop_query = _get_blocked_users_cte() + """
+                loop_query = _get_one_way_blocked_users_cte() + """
                     SELECT 
                         c.title, c.contentpath, c.spotlightnum, c.posttimestamp, 
                         c.playnum, c.link, u1.username, u1.userID, u1.iconimgpath, 
@@ -757,6 +814,20 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
                     ) comment_counts ON c.contentID = comment_counts.contentID
                     WHERE (c.textflag = FALSE OR c.textflag IS NULL)
                     AND c.userID NOT IN (SELECT userID FROM blocked_users)
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM (
+                            SELECT DISTINCT contentID
+                            FROM (
+                                SELECT contentID
+                                FROM playhistory
+                                WHERE userID = %s
+                                ORDER BY playid DESC
+                                LIMIT 50
+                            ) AS recent_history
+                        ) ph
+                        WHERE ph.contentID = c.contentID
+                    )
                     ORDER BY c.contentID ASC
                     LIMIT %s;
                 """
