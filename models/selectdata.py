@@ -774,10 +774,10 @@ def get_notified(contentid, uid):
             row = cur.fetchone()
         if row:
             return row[0]
-        return None
+        return False
     except psycopg2.Error as e:
         print("データベースエラー:", e)
-        return None
+        return False
     finally:
         if conn:
             release_connection(conn)
