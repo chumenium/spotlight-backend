@@ -391,14 +391,8 @@ def spotlight_on_route():
             title = content_user_data["title"]
             if uid != content_user_data["userID"]:
                 #スポットライトオンオフを連打しても通知を一度だけにする
-<<<<<<< HEAD
-                isnotififlag = get_notified(contentid=contentID, uid=content_user_data["userID"])
-                print("通知フラグ",isnotififlag)
-                if isnotififlag:
-=======
                 notified = get_notified(contentid=contentID, uid=content_user_data["userID"])
                 if not notified:
->>>>>>> 910c1e94c4e0f672c5d546adc250f68cd424f86d
                     send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
         if  uid != content_user_data["userID"]:
             insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
@@ -629,14 +623,7 @@ def get_content_random_5():
                 "contentID":row[13]
             })
             lastcontentid = row[13]
-<<<<<<< HEAD
-        printtext = "ランダム取得したコンテンツ"
-        for i in range(len(result)):
-            printtext += str(result[i]["contentID"]) + ":" +str(result[i]["title"]) +","
-        print(printtext)
-=======
         # デバッグ用のprint文を削除（コスト削減のため）
->>>>>>> 910c1e94c4e0f672c5d546adc250f68cd424f86d
 
         resultnum = len(result)
         shortagenum = 5 - resultnum
