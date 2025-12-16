@@ -772,9 +772,15 @@ def get_notified(contentid, uid):
         with conn.cursor() as cur:
             cur.execute('SELECT notified FROM contentuser WHERE contentID = %s AND userID = %s', (contentid,uid))
             row = cur.fetchone()
-        if row:
-            return row[0]
-        return False
+            if row:
+                notified = row[0]
+            cur.execute("""
+                UPDATE contentuser
+                SET notified = True
+                WHERE contentID = %s AND userID = %s
+                """, (contentid,uid))
+            conn.commit()
+        return notified
     except psycopg2.Error as e:
         print("データベースエラー:", e)
         return False

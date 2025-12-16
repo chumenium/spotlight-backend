@@ -392,8 +392,8 @@ def spotlight_on_route():
             if uid != content_user_data["userID"]:
                 #スポットライトオンオフを連打しても通知を一度だけにする
                 isnotififlag = get_notified(contentid=contentID, uid=content_user_data["userID"])
-                print("通知フラグ",isnotififlag)
-                if isnotififlag:
+                print("通知フラグ",not isnotififlag)
+                if not isnotififlag:
                     send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
         if  uid != content_user_data["userID"]:
             insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
@@ -954,13 +954,13 @@ def get_content_random_api():
             })
         
         # 不足分がある場合、ループして最初から取得
-        if len(result) < 5:
+        if len(result) < 3:
             # 既に取得したIDを除外して追加取得
             additional_exclude = list(fetched_content_ids) + exclude_content_ids
             additional_rows = get_content_random_5(uid, exclude_content_ids=additional_exclude)
             
             for row in additional_rows:
-                if len(result) >= 5:
+                if len(result) >= 3:
                     break
                 content_id = row[13]
                 if content_id in fetched_content_ids:
@@ -997,7 +997,7 @@ def get_content_random_api():
             from models.content_get import get_content_id_range
             min_id, max_id, total_count = get_content_id_range(uid)
             # 取得件数が少ない場合、または取得したIDが範囲外の場合はループした可能性
-            is_looped = (total_count > 0 and len(result) < 5) or \
+            is_looped = (total_count > 0 and len(result) < 3) or \
                        (min_id is not None and last_content_id < min_id) or \
                        (max_id is not None and last_content_id > max_id)
         

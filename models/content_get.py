@@ -447,7 +447,7 @@ def get_content_random_5(uid, exclude_content_ids=None):
                 AND c.userID NOT IN (SELECT userID FROM blocked_users)
             """ + exclude_condition + """
                 ORDER BY RANDOM()
-                LIMIT 5;
+                LIMIT 3;
             """
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
