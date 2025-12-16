@@ -92,7 +92,7 @@ def delete_serch_history(uid, serchID):
         with conn.cursor() as cur:
             cur.execute("""
                 DELETE FROM serchhistory
-                WHERE userID = %s AND serchID = %s
+                WHERE userID = %s AND serchword = %s
             """, (uid, serchID))
         conn.commit()
 
