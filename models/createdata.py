@@ -132,7 +132,7 @@ def insert_play_history(userID, contentID):
                 VALUES (%s, %s);
             """, (userID, contentID))
             conn.commit()
-            print("再生履歴を追加しました")
+            #print("再生履歴を追加しました")
             # 再生履歴が500件を超えたら古い順に200件削除
             cur.execute("""
                 SELECT COUNT(*)
@@ -140,9 +140,9 @@ def insert_play_history(userID, contentID):
                  WHERE userID = %s;
             """, (userID,))
             total_count = cur.fetchone()[0]
-            print(f"再生履歴の合計件数: {total_count}",type(total_count))
+            #print(f"再生履歴の合計件数: {total_count}",type(total_count))
             if total_count > 500:
-                print("再生履歴が500件を超えたので古い順に200件削除")
+                #print("再生履歴が500件を超えたので古い順に200件削除")
                 cur.execute("""
                     DELETE FROM playhistory
                      WHERE userID = %s
