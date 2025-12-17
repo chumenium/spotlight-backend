@@ -88,6 +88,7 @@ def insert_playlist_detail(userID, playlistID, contentID):
         """, (userID, playlistID, contentID))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -106,6 +107,7 @@ def insert_search_history(userID, serchword):
         """, (userID, serchword))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -156,6 +158,7 @@ def insert_notification(userID, contentuserCID=None, contentuserUID=None, comCTI
         """, (userID, contentuserCID, contentuserUID, comCTID, comCMID, notificationtext, notificationtitle))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -195,6 +198,7 @@ def insert_report(
         conn.commit()
 
     except psycopg2.Error as e:
+        pass
 
     finally:
         if conn:

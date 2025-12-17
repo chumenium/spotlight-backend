@@ -232,11 +232,13 @@ def delete_content(uid, contentID):
             try:
                 delete_file_from_url(contentpath)
             except Exception as e:
+                pass
 
         if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
             try:
                 delete_file_from_url(thumbnailpath)
             except Exception as e:
+                pass
 
     except psycopg2.Error as e:
         if conn:
@@ -313,11 +315,13 @@ def delete_content_by_admin(contentID):
             try:
                 delete_file_from_url(contentpath)
             except Exception as e:
+                pass
 
         if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
             try:
                 delete_file_from_url(thumbnailpath)
             except Exception as e:
+                pass
 
     except psycopg2.Error as e:
         if conn:
