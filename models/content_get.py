@@ -451,9 +451,22 @@ def get_content_random_5(uid, exclude_content_ids=None):
             """
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
+            # デバッグ: 取得した行数を確認
+            if len(rows) > 0:
+                print(f"get_content_random_5: {len(rows)}件取得")
+                print(f"最初の行の列数: {len(rows[0]) if rows else 0}")
+                if rows and len(rows[0]) > 0:
+                    print(f"最初の行のタイトル: {rows[0][0]}")
+                    print(f"最初の行の全データ: {rows[0]}")
+                    # 列名も確認
+                    if cur.description:
+                        column_names = [desc[0] for desc in cur.description]
+                        print(f"取得した列名: {column_names}")
         return rows
     except psycopg2.Error as e:
         print("データベースエラー(get_content_random_5):", e)
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -636,10 +649,19 @@ def get_content_newest_with_priority(uid, limitnum=5, exclude_content_ids=None):
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
             
+            # デバッグ: 取得した行数を確認
+            if len(rows) > 0:
+                print(f"get_content_newest_with_priority: {len(rows)}件取得")
+                print(f"最初の行の列数: {len(rows[0]) if rows else 0}")
+                if rows and len(rows[0]) > 0:
+                    print(f"最初の行のタイトル: {rows[0][0]}")
+            
             # priorityカラムを除外して返す（後方互換性のため）
             return [row[:14] for row in rows]
     except psycopg2.Error as e:
         print("データベースエラー(get_content_newest_with_priority):", e)
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -794,6 +816,13 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
             
+            # デバッグ: 取得した行数を確認
+            if len(rows) > 0:
+                print(f"get_content_oldest_with_newest_queue: {len(rows)}件取得")
+                print(f"最初の行の列数: {len(rows[0]) if rows else 0}")
+                if rows and len(rows[0]) > 0:
+                    print(f"最初の行のタイトル: {rows[0][0]}")
+            
             # 不足分がある場合、ループして最初から取得
             if len(rows) < limitnum:
                 loop_query = _get_one_way_blocked_users_cte() + """
@@ -839,6 +868,8 @@ def get_content_oldest_with_newest_queue(uid, limitnum=5, exclude_content_ids=No
             return [row[:14] for row in rows[:limitnum]]
     except psycopg2.Error as e:
         print("データベースエラー(get_content_oldest_with_newest_queue):", e)
+        import traceback
+        traceback.print_exc()
         return []
     finally:
         if conn:
