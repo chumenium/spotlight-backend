@@ -83,6 +83,7 @@ def enable_notification(userID):
             """, (userID,))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -102,6 +103,7 @@ def disable_notification(userID):
             """, (userID,))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -118,6 +120,7 @@ def chenge_icon(userID, iconimgpath):
             """, (iconimgpath, userID))
         conn.commit()
     except psycopg2.Error as e:
+        pass
     finally:
         if conn:
             release_connection(conn)
