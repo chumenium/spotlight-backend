@@ -11,10 +11,23 @@ def delete_play_history(userID, playID):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
+            # playIDに紐づくcontentIDを取得
             cur.execute("""
-                DELETE FROM playhistory
-                WHERE userID = %s AND playID = %s
+                SELECT contentID
+                  FROM playhistory
+                 WHERE userID = %s AND playID = %s
+                 LIMIT 1
             """, (userID, playID))
+            row = cur.fetchone()
+
+            # 対象のplayIDを含め、同一contentIDの履歴をまとめて削除
+            if row:
+                content_id = row[0]
+                cur.execute("""
+                    DELETE FROM playhistory
+                     WHERE userID = %s
+                       AND contentID = %s
+                """, (userID, content_id))
         conn.commit()
 
     except psycopg2.Error as e:
