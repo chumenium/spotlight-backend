@@ -5,7 +5,7 @@ from flask import Blueprint, request, jsonify, current_app
 from datetime import datetime
 from utils.auth import jwt_required
 from models.admin_sql import (
-    get_all_user_data, uid_admin_auth, disable_admin, enable_admin, get_all_content_data,get_reports_data,process_report,unprocess_report,get_content_data
+    get_all_user_data, uid_admin_auth, disable_admin, enable_admin, get_reports_data,process_report,unprocess_report,get_content_data
 )
 from models.deletedata import (
     delete_content_by_admin,delete_comment
@@ -13,7 +13,7 @@ from models.deletedata import (
 from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url
 
 
-admin_bp = Blueprint('amdin', __name__, url_prefix='/api/admin')
+admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 
 # ===============================
@@ -84,41 +84,6 @@ def disable_admin_api():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
-
-#コンテンツ情報を取得
-@admin_bp.route('/content', methods=['POST'])
-@jwt_required
-def content_management():
-    try:
-        contents = []
-        uid = request.user["firebase_uid"]
-        if uid_admin_auth(uid):
-            data = request.get_json()
-            offset = data.get("offset")
-            datas = get_all_content_data(offset)
-            for row in datas:
-                contents.append({
-                    "contentID": row[0],        #コンテンツのID
-                    "spotlightnum": row[1],     #コンテンツのスポットライト数
-                    "playnum": row[2],          #再生回数
-                    "contentpath": row[3],      #コンテンツURL
-                    "thumbnailpath": row[4],    #サムネイルURL
-                    "title": row[5],            #タイトル
-                    "tag": row[6],              #タグ
-                    "posttimestamp": row[7],    #コンテンツの投稿時間
-                    "userID": row[8],           #投稿したユーザのID
-                    "username": row[9],         #ユーザネーム
-                    "commentnum": row[10],       #コメント数
-                    "reportnum": row[11]        #通報された件数
-                })
-            return jsonify({
-                "status": "success",
-                "contents" :contents
-            }), 200
-        else:
-            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
 
 #通報を取得
 @admin_bp.route('/report', methods=['POST'])
