@@ -9,11 +9,9 @@ def update_FMCtoken(new_token, uid):
         with conn.cursor() as cur:
             cur.execute('UPDATE "user" SET token = %s WHERE userID = %s', (new_token, uid))
         conn.commit()
-        print("✅ tokenをアップデートしました。")
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -36,9 +34,7 @@ def spotlight_on(contentID, userID):
                 WHERE contentID = %s AND userID = %s;
             """, (contentID, userID))
         conn.commit()
-        print("✅ スポットライトをONにしました。")
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
         if conn:
             conn.rollback()
     finally:
@@ -66,9 +62,7 @@ def spotlight_off(contentID, userID):
             """, (contentID, userID))
         conn.commit()
         delete_notification_contentuser(contentID,userID)
-        print("✅ スポットライトをOFFにしました。")
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
         if conn:
             conn.rollback()
     finally:
@@ -88,9 +82,8 @@ def enable_notification(userID):
                 WHERE userID = %s;
             """, (userID,))
         conn.commit()
-        print("✅ 通知をONにしました。")
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -109,9 +102,8 @@ def disable_notification(userID):
                 WHERE userID = %s;
             """, (userID,))
         conn.commit()
-        print("✅ 通知をOFFにしました。")
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -127,9 +119,8 @@ def chenge_icon(userID, iconimgpath):
                 UPDATE "user" SET iconimgpath = %s WHERE userID = %s;
             """, (iconimgpath, userID))
         conn.commit()
-        print(f"✅ アイコンを変更しました。")
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -167,9 +158,7 @@ def update_bio(userID, bio):
                 UPDATE "user" SET bio = %s WHERE userID = %s;
             """, (bio if bio else None, userID))
         conn.commit()
-        print(f"✅ 自己紹介文を更新しました。")
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         if conn:
             conn.rollback()
     finally:

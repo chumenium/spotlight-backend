@@ -7,7 +7,7 @@ from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
-    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username
+    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id
 )
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
 from models.createdata import (
@@ -20,6 +20,26 @@ import re
 import base64
 
 users_bp = Blueprint('users', __name__, url_prefix='/api/users')
+
+# ========================================
+# ヘルパー関数：タイトルを15文字に制限
+# ========================================
+def truncate_title(title, max_length=15):
+    """
+    タイトルを最大15文字に制限
+    
+    Args:
+        title: タイトル文字列
+        max_length: 最大文字数（デフォルト15）
+    
+    Returns:
+        str: 制限されたタイトル
+    """
+    if not title:
+        return ""
+    if len(title) <= max_length:
+        return title
+    return title[:max_length]
 
 
 # ===============================
@@ -75,6 +95,8 @@ def enable_user_notification():
     try:
         uid = request.user["firebase_uid"]
         enable_notification(uid)
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"通知設定変更:{username}")
         return jsonify({"status": "success", "message": "通知をONにしました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -89,6 +111,8 @@ def disable_user_notification():
     try:
         uid = request.user["firebase_uid"]
         disable_notification(uid)
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"通知設定変更:{username}")
         return jsonify({"status": "success", "message": "通知をOFFにしました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -216,7 +240,8 @@ def update_bio_api():
         
         # データベースを更新
         update_bio(uid, bio if bio else None)
-        
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"プロフィール更新:{username}")
         return jsonify({
             "status": "success",
             "message": "自己紹介文を更新しました"
@@ -292,7 +317,7 @@ def change_icon():
 
         # ===== DBにCloudFront URLを保存 =====
         chenge_icon(uid, iconimgpath)
-        
+        print(f"アイコン変更:{username}")
         return jsonify({
             "status": "success",
             "message": "アイコンを変更しました。",
@@ -425,16 +450,25 @@ def send_report_api():
         rtype = data.get("type")
         reason = data.get("reason")
         detail = data.get("detail")
+        username, _, _, _ = get_user_name_iconpath(uid)
         if rtype == "user":
             targetuid = data.get("uid")
             insert_report(reporttype=rtype, reportuidID=uid, targetuidID=targetuid, reason=reason, detail=detail)
+            target_username, _, _, _ = get_user_name_iconpath(targetuid)
+            print(f"通報(ユーザー):{username}:対象({target_username})")
         elif rtype == "content":
             contentid1 = data.get("contentID")
             insert_report(reporttype=rtype, reportuidID=uid, contentID=contentid1, reason=reason, detail=detail)
+            content_data = get_user_by_content_id(contentid1)
+            content_title = content_data["title"]
+            print(f"通報(投稿):{username}:\"{truncate_title(content_title)}\"")
         elif rtype == "comment":
             contentid2 = data.get("contentID")
             commentid = data.get("commentID")
             insert_report(reporttype=rtype, reportuidID=uid, comCTID=contentid2, comCMID=commentid, reason=reason, detail=detail)
+            content_data = get_user_by_content_id(contentid2)
+            content_title = content_data["title"]
+            print(f"通報(投稿):{username}:\"{truncate_title(content_title)}\"")
         else:
             return jsonify({
                 "status": "error",

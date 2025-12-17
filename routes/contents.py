@@ -6,6 +6,26 @@ from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required, debounce_request
 
 # ========================================
+# ヘルパー関数：タイトルを15文字に制限
+# ========================================
+def truncate_title(title, max_length=15):
+    """
+    タイトルを最大15文字に制限
+    
+    Args:
+        title: タイトル文字列
+        max_length: 最大文字数（デフォルト15）
+    
+    Returns:
+        str: 制限されたタイトル
+    """
+    if not title:
+        return ""
+    if len(title) <= max_length:
+        return title
+    return title[:max_length]
+
+# ========================================
 # ヘルパー関数：コンテンツタイプを推測
 # ========================================
 def infer_content_type(contentpath, textflag):
@@ -234,6 +254,7 @@ def add_content():
                 userID=uid,
                 tag=tag
             )
+            print(f"投稿作成:{username}:\"{truncate_title(title)}\"")
         else:
             text = data.get("text") 
             #--- DB登録(text) ---
@@ -245,6 +266,7 @@ def add_content():
                 textflag="TRUE",
                 tag=tag
             )
+            print(f"投稿作成:{username}:\"{truncate_title(title)}\"")
 
         if content_type != "text":
             return jsonify({
@@ -305,12 +327,15 @@ def add_comment():
             )
             #投稿元のユーザに通知を送信
             content_user_data = get_user_by_content_id(contentID)
+            content_title = content_user_data["title"]
             if content_user_data["notificationenabled"]:
-                title = content_user_data["title"]
                 if uid != content_user_data["userID"]:
-                    send_push_notification(content_user_data["token"], post_username+"さんがコメントを投稿",title+":"+commenttext)
+                    send_push_notification(content_user_data["token"], post_username+"さんがコメントを投稿",content_title+":"+commenttext)
             if uid != content_user_data["userID"]:
                 insert_notification(userID=content_user_data['userID'],comCTID=contentID,comCMID=commentid)
+                notified_username, _, _, _ = get_user_name_iconpath(content_user_data['userID'])
+                print(f"通知:{notified_username}:通知種別(コメント)")
+            print(f"コメント投稿:{post_username}:\"{truncate_title(content_title)}\"")
 
         return jsonify({"status": "success", "message": "コメントを追加しました。"}), 200
     except Exception as e:
@@ -367,6 +392,11 @@ def content_detail():
         # アイコンパスをCloudFront URLに正規化
         iconimgpath = normalize_content_url(detail[7]) if len(detail) > 7 and detail[7] else None
         
+        # 投稿取得ログ
+        username, _, _, _ = get_user_name_iconpath(uid)
+        content_title = detail[0]
+        print(f"投稿取得:{username}:\"{truncate_title(content_title)}\"")
+        
         return jsonify({
             "status": "success",
             "data": {
@@ -406,6 +436,12 @@ def playnum_add_route():
         
         add_playnum(contentID)
         insert_play_history(userID=uid, contentID=contentID)
+        # 投稿タイトルを取得
+        detail = get_content_detail(contentID)
+        if detail:
+            content_title = detail[0]
+            username, _, _, _ = get_user_name_iconpath(uid)
+            print(f"再生:{username}:\"{truncate_title(content_title)}\"")
         return jsonify({"status": "success", "message": "再生回数を追加"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -425,16 +461,18 @@ def spotlight_on_route():
         #投稿元のユーザに通知を送信
         content_user_data = get_user_by_content_id(contentID)
         spotlight_user = get_user_by_id(uid)  # if文の外で定義
+        content_title = content_user_data["title"]
         if content_user_data["notificationenabled"]:
-            title = content_user_data["title"]
             if uid != content_user_data["userID"]:
                 #スポットライトオンオフを連打しても通知を一度だけにする
                 isnotififlag = get_notified(contentid=contentID, uid=content_user_data["userID"])
-                print("通知フラグ",not isnotififlag)
                 if not isnotififlag:
-                    send_push_notification(content_user_data["token"], "スポットライトが当てられました",title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
+                    send_push_notification(content_user_data["token"], "スポットライトが当てられました",content_title+"に"+spotlight_user["username"]+"さんがスポットライトを当てました")
         if  uid != content_user_data["userID"]:
             insert_notification(userID=content_user_data["userID"],contentuserCID=contentID,contentuserUID=spotlight_user["userID"])
+            notified_username, _, _, _ = get_user_name_iconpath(content_user_data["userID"])
+            print(f"通知:{notified_username}:通知種別(スポットライト)")
+        print(f"スポットライト:{spotlight_user['username']}:\"{truncate_title(content_title)}\"")
         return jsonify({"status": "success", "message": "スポットライトをONにしました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -451,6 +489,11 @@ def spotlight_off_route():
         data = request.get_json()
         contentID = data.get("contentID")
         spotlight_off(contentID, uid)
+        # 投稿タイトルを取得
+        content_user_data = get_user_by_content_id(contentID)
+        spotlight_user = get_user_by_id(uid)
+        content_title = content_user_data["title"]
+        print(f"スポットライト解除:{spotlight_user['username']}:\"{truncate_title(content_title)}\"")
         return jsonify({"status": "success", "message": "スポットライトをOFFにしました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -515,6 +558,8 @@ def create_playlist():
         data = request.get_json()
         title = data.get("title")
         insert_playlist(uid, title)
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"プレイリスト作成:{username}")
         return jsonify({"status": "success", "message": "プレイリストを作成しました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -529,6 +574,12 @@ def add_content_in_playlist():
         playlistid = data.get("playlistID")
         contentid = data.get("contentID")
         insert_playlist_detail(uid, playlistid, contentid)
+        username, _, _, _ = get_user_name_iconpath(uid)
+        # 投稿タイトルを取得
+        detail = get_content_detail(contentid)
+        if detail:
+            content_title = detail[0]
+            print(f"プレイリスト追加:{username}:\"{truncate_title(content_title)}\"")
         return jsonify({"status": "success", "message": "プレイリストにコンテンツを追加しました"}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
@@ -584,6 +635,8 @@ def serch():
         serchword = data.get("word")
         #検索履歴を保存
         insert_search_history(userID=uid,serchword=serchword)
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"検索:{username}:{serchword}")
 
         # モデル関数から検索結果を取得
         rows = get_search_contents(serchword)
@@ -847,6 +900,10 @@ def get_content_random_api():
             is_looped = (total_count > 0 and len(result) < 3) or \
                        (min_id is not None and last_content_id < min_id) or \
                        (max_id is not None and last_content_id > max_id)
+        
+        # 投稿一覧取得ログ
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"投稿一覧取得:{username}")
         
         return jsonify({
             "status": "success",

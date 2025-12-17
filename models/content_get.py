@@ -83,7 +83,6 @@ def get_recent_history_ids(uid, exclude_content_ids=None):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -146,7 +145,6 @@ def get_history_ran(uid,limitnum, exclude_content_ids=None):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -163,9 +161,8 @@ def update_last_contetid(uid,contentid):
                 WHERE userID = %s;
             """, (contentid,uid))
         conn.commit()
-        # デバッグ用のprint文を削除（コスト削減のため）
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -189,7 +186,6 @@ def get_one_content(uid,contentid):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -291,22 +287,8 @@ def get_content_random_5(uid, exclude_content_ids=None):
             """
             cur.execute(query, tuple(params))
             rows = cur.fetchall()
-            # デバッグ: 取得した行数を確認
-            if len(rows) > 0:
-                print(f"get_content_random_5: {len(rows)}件取得")
-                print(f"最初の行の列数: {len(rows[0]) if rows else 0}")
-                if rows and len(rows[0]) > 0:
-                    print(f"最初の行のタイトル: {rows[0][0]}")
-                    print(f"最初の行の全データ: {rows[0]}")
-                    # 列名も確認
-                    if cur.description:
-                        column_names = [desc[0] for desc in cur.description]
-                        print(f"取得した列名: {column_names}")
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー(get_content_random_5):", e)
-        import traceback
-        traceback.print_exc()
         return []
     finally:
         if conn:
@@ -333,7 +315,6 @@ def get_content_id_range(uid):
             row = cur.fetchone()
         return (row[0], row[1], row[2]) if row else (None, None, 0)
     except psycopg2.Error as e:
-        print("データベースエラー(get_content_id_range):", e)
         return None, None, 0
     finally:
         if conn:

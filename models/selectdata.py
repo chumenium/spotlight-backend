@@ -23,7 +23,6 @@ def get_user_by_id(userID):
             }
         return None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -52,7 +51,6 @@ def get_user_by_content_id(contentID):
             }
         return None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -78,7 +76,6 @@ def get_user_by_parentcomment_id(contentID,parentcommentID):
             }
         return None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -95,7 +92,6 @@ def user_exists(userID):
             count = cur.fetchone()[0]
         return count > 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return False
     finally:
         if conn:
@@ -114,7 +110,6 @@ def get_user_name_iconpath(userID):
             return row[0], row[1], row[2], row[3]
         return None, None, None, None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None, None, None, None
     finally:
         if conn:
@@ -129,11 +124,9 @@ def get_user_spotlightnum(userID):
             cur.execute('SELECT SUM(spotlightnum) FROM content where userID = %s', (userID,))
             row = cur.fetchone()
         if row:
-            print(row[0])
             return row[0]
         return None, None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None, None
     finally:
         if conn:
@@ -164,7 +157,6 @@ def get_random_content_id():
             return row[0]
         return None
     except psycopg2.Error as e:
-        print("データベースエラー(get_random_content_id):", e)
         return None
     finally:
         if conn:
@@ -190,7 +182,6 @@ def get_content_id():
             rows = cur.fetchall()
         return [r[0] for r in rows]
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -228,10 +219,8 @@ def get_content_by_filename(folder, filename):
         conn.commit()
         return row
     except psycopg2.Error as e:
-        print("❌ データベースエラー(get_content_by_filename):", e)
         return None
     except Exception as e:
-        print(f"❌ エラー(get_content_by_filename): {e}")
         return None
     finally:
         if conn:
@@ -257,7 +246,6 @@ def get_content_detail(contentID):
         conn.commit()
         return row
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -279,7 +267,6 @@ def get_user_spotlight_flag(userID, contentID):
             row = cur.fetchone()
         return row[0] if row else False
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return False
     finally:
         if conn:
@@ -303,7 +290,6 @@ def get_comments_by_content(contentID):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -328,7 +314,6 @@ def get_search_history(userID):
             rows = cur.fetchall()
         return [r[0] for r in rows]
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -352,7 +337,6 @@ def get_user_contents(userID):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -376,7 +360,6 @@ def get_spotlight_contents(userID):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -407,7 +390,6 @@ def get_play_history(userID):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -432,7 +414,6 @@ def get_playlist_contents(userID, playlistID):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー(get_playlist_contents):", e)
         return []
     finally:
         if conn:
@@ -477,7 +458,6 @@ def get_playlists_with_thumbnail(userID):
         return result
 
     except psycopg2.Error as e:
-        print("データベースエラー(get_playlists_with_thumbnail):", e)
         return []
     finally:
         if conn:
@@ -542,7 +522,6 @@ def get_search_contents(word):
 
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -569,8 +548,7 @@ def get_search_contents(word):
 #             rows = cur.fetchall()
 #         return rows
 #     except psycopg2.Error as e:
-#         print("データベースエラー:", e)
-#         return []
+# #         return []
 #     finally:
 #         if conn:
 #             release_connection(conn)
@@ -623,7 +601,6 @@ def get_notification(uid):
             conn.commit()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -644,7 +621,6 @@ def get_unloaded_num(uid):
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return 0
     finally:
         if conn:
@@ -665,7 +641,6 @@ def get_comment_num(contentid):
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return 0
     finally:
         if conn:
@@ -687,7 +662,6 @@ def get_spotlight_num(userid):
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return 0
     finally:
         if conn:
@@ -709,7 +683,6 @@ def get_spotlight_num_by_username(username):
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return 0
     finally:
         if conn:
@@ -738,7 +711,6 @@ def get_user_contents_by_username(username):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -757,7 +729,6 @@ def get_bio_by_username(username):
             return row[0]
         return None
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return None
     finally:
         if conn:
@@ -782,7 +753,6 @@ def get_notified(contentid, uid):
             conn.commit()
         return notified
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return False
     finally:
         if conn:

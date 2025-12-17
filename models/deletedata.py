@@ -20,7 +20,6 @@ def delete_play_history(userID, playID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -43,7 +42,6 @@ def delete_playlist_detail(uid, playlistID, contentID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -76,7 +74,6 @@ def delete_playlist(uid, playlistID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -99,7 +96,6 @@ def delete_serch_history(uid, serchID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -122,7 +118,6 @@ def delete_notification(uid, notificationID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -160,7 +155,6 @@ def delete_comment(contentID, commentID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -237,21 +231,18 @@ def delete_content(uid, contentID):
         if contentpath and (contentpath.startswith('http://') or contentpath.startswith('https://')):
             try:
                 delete_file_from_url(contentpath)
-                print(f"🗑️ S3からコンテンツファイルを削除: {contentpath}")
             except Exception as e:
-                print(f"⚠️ S3削除エラー(contentpath): {e}")
+                pass
 
         if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
             try:
                 delete_file_from_url(thumbnailpath)
-                print(f"🗑️ S3からサムネイルファイルを削除: {thumbnailpath}")
             except Exception as e:
-                print(f"⚠️ S3削除エラー(thumbnailpath): {e}")
+                pass
 
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -323,21 +314,18 @@ def delete_content_by_admin(contentID):
         if contentpath and (contentpath.startswith('http://') or contentpath.startswith('https://')):
             try:
                 delete_file_from_url(contentpath)
-                print(f"🗑️ S3からコンテンツファイルを削除: {contentpath}")
             except Exception as e:
-                print(f"⚠️ S3削除エラー(contentpath): {e}")
+                pass
 
         if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
             try:
                 delete_file_from_url(thumbnailpath)
-                print(f"🗑️ S3からサムネイルファイルを削除: {thumbnailpath}")
             except Exception as e:
-                print(f"⚠️ S3削除エラー(thumbnailpath): {e}")
+                pass
 
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)
@@ -358,7 +346,6 @@ def delete_notification_contentuser(contentuserCID,contentuserUID):
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        print("データベースエラー:", e)
     finally:
         if conn:
             release_connection(conn)

@@ -44,11 +44,9 @@ def get_user_by_admin_api():
                 "userdatas" :userdatas
             }), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
 
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -64,10 +62,8 @@ def enable_admin_api():
             enable_admin(uid)
             return jsonify({"status": "success", "message": f"{uid}を管理者に変更"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -83,10 +79,8 @@ def disable_admin_api():
             disable_admin(uid)
             return jsonify({"status": "success", "message": f"{uid}を一般ユーザに変更"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -122,10 +116,8 @@ def content_management():
                 "contents" :contents
             }), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #通報を取得
@@ -162,10 +154,8 @@ def get_report_api():
                 "reports" :reports
             }), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #コンテンツを削除
@@ -180,10 +170,8 @@ def delete_content_by_admin_api():
             delete_content_by_admin(contentid)
             return jsonify({"status": "success", "message": "該当コンテンツを削除"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #コメントを削除
@@ -199,10 +187,8 @@ def delete_comment_by_admin_api():
             delete_comment(contentid,commentid)
             return jsonify({"status": "success", "message": "該当コメントを削除"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
@@ -218,10 +204,8 @@ def process_report_api():
             process_report(reportid)
             return jsonify({"status": "success", "message": "通報を処理"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #通報を処理解除
@@ -237,10 +221,8 @@ def unprocess_report_api():
             unprocess_report(reportid)
             return jsonify({"status": "success", "message": "通報を処理解除"}), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #コンテンツ情報を取得
@@ -343,8 +325,6 @@ def content_management():
 
 #             return jsonify({"status": "success", "message": "xxxxx"}), 200
 #         else:
-#             print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
-#             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+# #             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
 #     except Exception as e:
-#         print("⚠️エラー:", e)
-#         return jsonify({"status": "error", "message": str(e)}), 400
+# #         return jsonify({"status": "error", "message": str(e)}), 400
