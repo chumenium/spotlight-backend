@@ -792,7 +792,7 @@ def serch():
 # ========================================
 @content_bp.route('/getcontents/random', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=2.0)  # 2秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
+@debounce_request(ttl=3.0)  # 3秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_random_api():
     """
     完全ランダムで3件取得（重複なし、ループ対応）
@@ -901,7 +901,7 @@ def get_content_random_api():
                        (min_id is not None and last_content_id < min_id) or \
                        (max_id is not None and last_content_id > max_id)
         
-        # 投稿一覧取得ログ
+        # 投稿一覧取得ログ（デバウンス確認用：実際に処理されたリクエストのみログ出力）
         username, _, _, _ = get_user_name_iconpath(uid)
         print(f"投稿一覧取得:{username}")
         
