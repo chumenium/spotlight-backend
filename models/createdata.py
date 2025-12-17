@@ -131,6 +131,8 @@ def insert_play_history(userID, contentID):
                 INSERT INTO playhistory (userID, contentID)
                 VALUES (%s, %s);
             """, (userID, contentID))
+            conn.commit()
+            print("再生履歴を追加しました")
             # 再生履歴が500件を超えたら古い順に200件削除
             cur.execute("""
                 SELECT COUNT(*)
@@ -138,6 +140,7 @@ def insert_play_history(userID, contentID):
                  WHERE userID = %s;
             """, (userID,))
             total_count = cur.fetchone()[0]
+            print(f"再生履歴の合計件数: {total_count}")
             if total_count > 500:
                 cur.execute("""
                     DELETE FROM playhistory
@@ -151,6 +154,7 @@ def insert_play_history(userID, contentID):
                        );
                 """, (userID, userID))
             conn.commit()
+            print("再生履歴を削除しました")
         # デバッグ用のprint文を削除（コスト削減のため）
     except psycopg2.Error as e:
         # データベースエラーは無視（重複エラーなどは正常な動作）
