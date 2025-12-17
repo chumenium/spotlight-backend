@@ -174,3 +174,30 @@ def unprocess_report(reportID):
     finally:
         if conn:
             release_connection(conn)
+
+#コンテンツ情報取得
+def get_content_data(offset):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT c.contentID, c.spotlightnum, c.playnum, c.contentpath, c.thumbnailpath, c.title, c.tag, c.posttimestamp,
+                       c.userID , u.username,
+                COALESCE((SELECT COUNT(*) FROM comment WHERE contentID = c.contentID) ,0)AS commentnum,
+                COALESCE((SELECT COUNT(*) FROM reports WHERE contentID = c.contentID) ,0)AS reportnum
+                FROM content c 
+                LEFT OUTER JOIN "user" u ON c.userID = u.userID
+                ORDER BY c.contentID ASC
+                LIMIT 300 OFFSET %s;
+                """
+            ,(offset,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error as e:
+        print("データベースエラー:", e)
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
