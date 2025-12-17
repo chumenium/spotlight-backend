@@ -8,6 +8,8 @@ from flask_cors import CORS
 import os
 import mimetypes
 import re
+import signal
+import atexit
 from config import config
 
 # Firebase Admin
@@ -47,6 +49,7 @@ def create_app(config_name='production'):
     # DB 接続プール
     try:
         init_connection_pool()
+        print("🔌 DB接続")
     except Exception as e:
         pass
 
@@ -102,6 +105,21 @@ def create_app(config_name='production'):
 # 本番アプリインスタンス（Gunicorn 用）
 # ========================================
 app = create_app(os.getenv("FLASK_ENV", "production"))
+print("🚀 サーバー起動")
+
+# ========================================
+# サーバー停止時のログ
+# ========================================
+def signal_handler(sig, frame):
+    print("🛑 サーバー停止")
+    exit(0)
+
+def exit_handler():
+    print("🛑 サーバー停止")
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+atexit.register(exit_handler)
 
 # ========================================
 # 開発環境のみローカルで起動

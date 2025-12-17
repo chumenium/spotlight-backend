@@ -4,7 +4,7 @@
 """
 from flask import Blueprint, request, jsonify
 from models.create_username import register_username
-from models.selectdata import user_exists
+from models.selectdata import user_exists, get_user_name_iconpath
 from models.updatedata import update_FMCtoken
 #from utils.auth import generate_jwt_token, verify_google_token
 import jwt
@@ -44,7 +44,8 @@ def handle_firebase_auth():
         firebase_uid = decoded_token["uid"]
 
         #ユーザが存在するかを確認
-        if not user_exists(firebase_uid):
+        is_new_user = not user_exists(firebase_uid)
+        if is_new_user:
             # DBに登録（ユーザ作成 or 更新）
             token = data.get("token")  # 通知用トークン
             register_username(firebase_uid, token)
@@ -52,6 +53,13 @@ def handle_firebase_auth():
             #デフォルトアイコンを設定
             iconimgpath = get_cloudfront_url("icon", filename)
             chenge_icon(firebase_uid, iconimgpath)
+            # 新規登録ログ
+            username, _, _, _ = get_user_name_iconpath(firebase_uid)
+            print(f"新規登録:{username}")
+        else:
+            # ログインログ
+            username, _, _, _ = get_user_name_iconpath(firebase_uid)
+            print(f"ログイン:{username}")
 
         # JWT発行
         jwt_token = jwt.encode({

@@ -3,9 +3,30 @@ from models.deletedata import (
     delete_play_history, delete_playlist_detail, delete_playlist,
     delete_serch_history, delete_notification, delete_comment, delete_content
 )
+from models.selectdata import get_user_name_iconpath, get_content_detail, get_search_history
 from flask import Blueprint, request, jsonify
 
 delete_bp = Blueprint('delete_bp', __name__, url_prefix='/api/delete')
+
+# ========================================
+# ヘルパー関数：タイトルを15文字に制限
+# ========================================
+def truncate_title(title, max_length=15):
+    """
+    タイトルを最大15文字に制限
+    
+    Args:
+        title: タイトル文字列
+        max_length: 最大文字数（デフォルト15）
+    
+    Returns:
+        str: 制限されたタイトル
+    """
+    if not title:
+        return ""
+    if len(title) <= max_length:
+        return title
+    return title[:max_length]
 
 
 # 共通レスポンス関数
@@ -31,12 +52,12 @@ def delete_play_history_api():
             return error("playID が必要です")
 
         delete_play_history(uid, playid)
-        print(f"🗑️ 視聴履歴削除: uid={uid}, playID={playid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"再生履歴削除:{username}")
 
         return success("視聴履歴を削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_playhistory):", e)
         return error(str(e))
 
 
@@ -57,12 +78,16 @@ def delete_playlist_detail_api():
             return error("playlistID と contentID が必要です")
 
         delete_playlist_detail(uid, playlistid, contentid)
-        print(f"🗑️ プレイリスト内削除: uid={uid}, playlistID={playlistid}, contentID={contentid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        # 投稿タイトルを取得
+        detail = get_content_detail(contentid)
+        if detail:
+            content_title = detail[0]
+            print(f"プレイリストから削除:{username}:\"{truncate_title(content_title)}\"")
 
         return success("プレイリスト内のコンテンツを削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_playlist_detail):", e)
         return error(str(e))
 
 
@@ -82,12 +107,12 @@ def delete_playlist_api():
             return error("playlistID が必要です")
 
         delete_playlist(uid, playlistid)
-        print(f"🗑️ プレイリスト削除: uid={uid}, playlistID={playlistid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"プレイリスト削除:{username}")
 
         return success("プレイリストを削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_playlist):", e)
         return error(str(e))
 
 
@@ -107,12 +132,13 @@ def delete_search_history_api():
             return error("serchID が必要です")
 
         delete_serch_history(uid, serchid)
-        print(f"🗑️ 検索履歴削除: uid={uid}, serchID={serchid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        # serchidは実際には検索ワード
+        print(f"検索履歴削除:{username}:{serchid}")
 
         return success("検索履歴を削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_searchhistory):", e)
         return error(str(e))
 
 
@@ -132,12 +158,12 @@ def delete_notification_api():
             return error("notificationID が必要です")
 
         delete_notification(uid, notificationid)
-        print(f"🗑️ 通知削除: uid={uid}, notificationID={notificationid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"通知削除:{username}")
 
         return success("通知を削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_notification):", e)
         return error(str(e))
 
 
@@ -148,6 +174,7 @@ def delete_notification_api():
 @jwt_required
 def delete_comment_api():
     try:
+        uid = request.user["firebase_uid"]
         data = request.get_json() or {}
 
         contentid = data.get("contentID")
@@ -157,12 +184,16 @@ def delete_comment_api():
             return error("contentID と commentID が必要です")
 
         delete_comment(contentid, commentid)
-        print(f"🗑️ コメント削除: contentID={contentid}, commentID={commentid}")
+        # 投稿タイトルを取得
+        detail = get_content_detail(contentid)
+        if detail:
+            content_title = detail[0]
+            username, _, _, _ = get_user_name_iconpath(uid)
+            print(f"コメント削除:{username}:\"{truncate_title(content_title)}\"")
 
         return success("コメントを削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_comment):", e)
         return error(str(e))
 
 
@@ -182,10 +213,14 @@ def delete_content_api():
             return error("contentID が必要です")
 
         delete_content(uid, contentid)
-        print(f"🗑️ コンテンツ削除: uid={uid}, contentID={contentid}")
+        username, _, _, _ = get_user_name_iconpath(uid)
+        # 投稿タイトルを取得
+        detail = get_content_detail(contentid)
+        if detail:
+            content_title = detail[0]
+            print(f"投稿削除:{username}:\"{truncate_title(content_title)}\"")
 
         return success("コンテンツを削除しました")
 
     except Exception as e:
-        print("⚠️ エラー(delete_content):", e)
         return error(str(e))

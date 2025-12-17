@@ -14,7 +14,6 @@ def uid_admin_auth(uid):
             row = cur.fetchone()
         return row[0] if row else 0
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -47,7 +46,6 @@ def get_all_user_data(offset):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -63,9 +61,8 @@ def enable_admin(userID):
                 UPDATE "user" SET admin = True WHERE userID = %s;
             """, (userID,))
         conn.commit()
-        print(f"✅ アイコンを変更しました。")
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -79,9 +76,8 @@ def disable_admin(userID):
                 UPDATE "user" SET admin = False WHERE userID = %s;
             """, (userID,))
         conn.commit()
-        print(f"✅ アイコンを変更しました。")
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -109,7 +105,6 @@ def get_all_content_data(offset):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -138,7 +133,6 @@ def get_reports_data(offset):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:
@@ -155,7 +149,7 @@ def process_report(reportID):
             """, (reportID,))
         conn.commit()
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)
@@ -170,7 +164,7 @@ def unprocess_report(reportID):
             """, (reportID,))
         conn.commit()
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
+        pass
     finally:
         if conn:
             release_connection(conn)

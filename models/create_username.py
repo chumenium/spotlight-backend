@@ -237,10 +237,8 @@ def register_username(userID, token):
         """, (userID,))
 
         conn.commit()
-        print(f"✅ ユーザ '{username}' を新規登録し、全コンテンツと紐付けました。")
 
     except psycopg2.Error as e:
-        print("❌ データベースエラー:", e)
         if conn:
             conn.rollback()
     finally:
