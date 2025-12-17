@@ -4,6 +4,47 @@
 # from turtle import title
 from flask import Blueprint, request, jsonify
 from utils.auth import jwt_required, debounce_request
+
+# ========================================
+# ヘルパー関数：コンテンツタイプを推測
+# ========================================
+def infer_content_type(contentpath, textflag):
+    """
+    contentpathとtextflagからコンテンツタイプを推測
+    
+    Args:
+        contentpath: コンテンツパス（URLまたはパス）
+        textflag: テキストフラグ
+    
+    Returns:
+        str: "video", "image", "audio", "text"
+    """
+    if textflag:
+        return "text"
+    
+    if not contentpath:
+        return "text"
+    
+    contentpath_lower = contentpath.lower()
+    
+    # 動画の判定
+    if "/movie/" in contentpath_lower or \
+       contentpath_lower.endswith((".mp4", ".mov", ".avi", ".webm")):
+        return "video"
+    
+    # 画像の判定
+    if "/picture/" in contentpath_lower or \
+       contentpath_lower.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+        return "image"
+    
+    # 音声の判定
+    if "/audio/" in contentpath_lower or \
+       contentpath_lower.endswith((".mp3", ".wav", ".m4a", ".aac")):
+        return "audio"
+    
+    # デフォルトはテキスト
+    return "text"
+
 from models.updatedata import spotlight_on, spotlight_off,add_playnum
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
@@ -649,10 +690,15 @@ def get_content_random_5():
                 contentpath = normalize_content_url(row[1]) if row[1] else None
                 thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
                 iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
+                
+                # コンテンツタイプを推測
+                content_type = infer_content_type(contentpath, row[9])
+                
                 result.append({
                     "title": row[0],
                     "contentpath": contentpath,
                     "thumbnailpath": thumbnailpath,
+                    "type": content_type,
                     "spotlightnum": row[2],
                     "posttimestamp": row[3].isoformat(),
                     "playnum": row[4],
@@ -760,10 +806,14 @@ def get_content_newest_api():
                     thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
                     iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
                     
+                    # コンテンツタイプを推測
+                    content_type = infer_content_type(contentpath, row[9])
+                    
                     result.append({
                         "title": row[0],
                         "contentpath": contentpath,
                         "thumbnailpath": thumbnailpath,
+                        "type": content_type,
                         "spotlightnum": row[2],
                         "posttimestamp": row[3].isoformat(),
                         "playnum": row[4],
@@ -971,10 +1021,14 @@ def get_content_random_api():
                 thumbnailpath = normalize_content_url(row[10]) if len(row) > 10 and row[10] else None
                 iconimgpath = normalize_content_url(row[8]) if len(row) > 8 and row[8] else None
                 
+                # コンテンツタイプを推測
+                content_type = infer_content_type(contentpath, row[9])
+                
                 result.append({
                     "title": row[0],
                     "contentpath": contentpath,
                     "thumbnailpath": thumbnailpath,
+                    "type": content_type,
                     "spotlightnum": row[2],
                     "posttimestamp": row[3].isoformat(),
                     "playnum": row[4],

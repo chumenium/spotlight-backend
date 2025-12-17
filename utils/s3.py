@@ -131,7 +131,10 @@ def normalize_content_url(path):
         return path
     
     # テキスト投稿の場合はそのまま返す（早期リターンで最適化）
-    if not path.startswith('/'):
+    # テキスト投稿はURLではなくテキスト内容なので、そのまま返す
+    if not path.startswith('/') and '/' not in path:
+        # パスにスラッシュが含まれていない場合はテキスト投稿の可能性が高い
+        # ただし、movie/filename.mp4のような形式の場合は処理する
         return path
     
     # アイコンパスの場合、CloudFront URLに変換
@@ -149,6 +152,17 @@ def normalize_content_url(path):
             folder = path_parts[0]  # movie, picture, audio, thumbnail
             filename = path_parts[1]
             return get_cloudfront_url(folder, filename)
+    
+    # movie/filename.mp4, picture/filename.jpg, audio/filename.mp3 のような形式の場合
+    # 例: movie/filename.mp4 -> https://d30se1secd7t6t.cloudfront.net/movie/filename.mp4
+    if '/' in path and not path.startswith('/'):
+        path_parts = path.split('/', 1)
+        if len(path_parts) == 2:
+            folder = path_parts[0]  # movie, picture, audio, thumbnail, icon
+            filename = path_parts[1]
+            # 有効なフォルダ名かチェック
+            if folder in ['movie', 'picture', 'audio', 'thumbnail', 'icon']:
+                return get_cloudfront_url(folder, filename)
     
     # その他の形式の場合はそのまま返す（テキスト投稿など）
     return path
