@@ -190,7 +190,6 @@ def get_content_data(offset):
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
-        print("データベースエラー:", e)
         return []
     finally:
         if conn:

@@ -256,10 +256,8 @@ def content_management():
                 "contents" :contents
             }), 200
         else:
-            print("⚠️エラー:", "⚠️⚠️管理者以外からのアクセスです⚠️⚠️")
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:
-        print("⚠️エラー:", e)
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #全てPOSTメソッド
