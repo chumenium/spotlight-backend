@@ -191,7 +191,7 @@ def unprocess_report_api():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 #コンテンツ情報を取得
-@admin_bp.route('/content', methods=['POST'])
+@admin_bp.route('/content2', methods=['POST'])
 @jwt_required
 def content_management():
     try:
