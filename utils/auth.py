@@ -65,14 +65,16 @@ def debounce_request(ttl=_cache_ttl):
                     # キャッシュに存在し、TTL内の場合
                     if cache_key in _request_cache:
                         last_time = _request_cache[cache_key]
-                        if current_time - last_time < ttl:
+                        elapsed = current_time - last_time
+                        if elapsed < ttl:
                             # 重複リクエストとして429エラーを返す
+                            # デバウンスされたリクエストはログ出力しない（正常な動作）
                             return jsonify({
                                 "status": "error",
                                 "message": "リクエストが頻繁すぎます。しばらく待ってから再度お試しください。"
                             }), 429
                     
-                    # キャッシュを更新
+                    # キャッシュを更新（リクエスト処理前に更新して、並行リクエストを防ぐ）
                     _request_cache[cache_key] = current_time
                     
                     # 古いキャッシュエントリを削除（メモリリーク防止）
