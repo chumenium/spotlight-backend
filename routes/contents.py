@@ -639,7 +639,7 @@ def serch():
         print(f"検索:{username}:{serchword}")
 
         # モデル関数から検索結果を取得
-        rows = get_search_contents(serchword)
+        rows = get_search_contents(serchword, uid)
 
         # データが存在しない場合
         if not rows:
