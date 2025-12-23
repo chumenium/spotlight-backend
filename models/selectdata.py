@@ -420,6 +420,30 @@ def get_playlist_contents(userID, playlistID):
             release_connection(conn)
 
 
+# ブロックしたユーザー一覧を取得
+def get_blocked_users(userID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    b.blockedUserID,
+                    u.username
+                FROM blocklist b
+                JOIN "user" u ON b.blockedUserID = u.userID
+                WHERE b.userID = %s
+                ORDER BY b.blocktimestamp DESC;
+            """, (userID,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 # 8️⃣ プレイリストタイトル＋先頭サムネイル＋コンテンツ数
 def get_playlists_with_thumbnail(userID):
     conn = None

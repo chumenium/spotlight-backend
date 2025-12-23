@@ -223,3 +223,47 @@ def insert_report(
     finally:
         if conn:
             release_connection(conn)
+
+
+# ---------------- ブロック登録/解除 ----------------
+def insert_block(userID, blockedUserID):
+    """ブロックリストに登録する"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO blocklist (userID, blockedUserID)
+                VALUES (%s, %s)
+                ON CONFLICT (userID, blockedUserID) DO NOTHING;
+            """, (userID, blockedUserID))
+            conn.commit()
+        return True
+    except psycopg2.Error:
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+def delete_block(userID, blockedUserID):
+    """ブロックリストから解除する"""
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                DELETE FROM blocklist
+                WHERE userID = %s AND blockedUserID = %s;
+            """, (userID, blockedUserID))
+            conn.commit()
+        return True
+    except psycopg2.Error:
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
