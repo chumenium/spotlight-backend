@@ -140,6 +140,8 @@ def get_user_contents_list():
                 "playnum": row[4],
                 "link": row[5],
                 "thumbnailpath": normalize_content_url(row[6]) if len(row) > 6 and row[6] else None,
+                "username": str(row[7]) if row[7] is not None else None,
+                "iconimgpath": normalize_content_url(row[8]) if len(row) > 8 and row[8] else None,
             }
             for row in rows
         ]
@@ -201,7 +203,7 @@ def get_play_history_list():
                 "playnum": row[4],
                 "link": row[5],
                 "thumbnailpath": row[6],
-                "username": row[7],
+                "username": str(row[7]) if row[7] is not None else None,
                 "iconimgpath": normalize_content_url(row[8]) if len(row) > 8 and row[8] else None,
             }
             for row in rows

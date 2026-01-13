@@ -328,11 +328,13 @@ def get_user_contents(userID):
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT contentID, title, spotlightnum, posttimestamp, 
-                       playnum, link, thumbnailpath
-                FROM content
-                WHERE userID = %s
-                ORDER BY posttimestamp DESC
+                SELECT c.contentID, c.title, c.spotlightnum, c.posttimestamp, 
+                       c.playnum, c.link, c.thumbnailpath,
+                       u.username, u.iconimgpath
+                FROM content c
+                JOIN "user" u ON c.userID = u.userID
+                WHERE c.userID = %s
+                ORDER BY c.posttimestamp DESC
             """, (userID,))
             rows = cur.fetchall()
         return rows
@@ -378,9 +380,11 @@ def get_play_history(userID):
                     SELECT DISTINCT ON (c.contentID)
                         c.contentID, c.title, c.spotlightnum, c.posttimestamp,
                         c.playnum, c.link, c.thumbnailpath,
+                        u.username, u.iconimgpath,
                         p.playID
                     FROM playhistory p
                     JOIN content c ON p.contentID = c.contentID
+                    JOIN "user" u ON c.userID = u.userID
                     WHERE p.userID = %s
                     ORDER BY c.contentID, p.playID DESC
                 ) AS unique_contents
