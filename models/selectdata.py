@@ -459,14 +459,17 @@ def get_playlists_with_thumbnail(userID):
                     p.playlistID,
                     p.title,
                     c.thumbnailpath,
-                    COUNT(pd.contentID) AS content_count
+                    COUNT(pd.contentID) AS content_count,
+                    u.username,
+                    u.iconimgpath
                 FROM playlist p
                 LEFT JOIN playlistdetail pd 
                     ON p.userID = pd.userID AND p.playlistID = pd.playlistID
                 LEFT JOIN content c 
                     ON pd.contentID = c.contentID
+                JOIN "user" u ON p.userID = u.userID
                 WHERE p.userID = %s
-                GROUP BY p.playlistID, p.title, c.thumbnailpath
+                GROUP BY p.playlistID, p.title, c.thumbnailpath, u.username, u.iconimgpath
                 ORDER BY p.playlistID
             """, (userID,))
             
@@ -478,7 +481,9 @@ def get_playlists_with_thumbnail(userID):
                 "playlistID": row[0],
                 "title": row[1],
                 "thumbnailpath": row[2],
-                "content_count": row[3]
+                "content_count": row[3],
+                "username": str(row[4]) if row[4] is not None else None,
+                "iconimgpath": row[5]
             }
             for row in rows
         ]
