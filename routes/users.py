@@ -131,8 +131,9 @@ def get_user_contents_list():
 
         # Dartで扱いやすいようにdictに変換
         from utils.s3 import normalize_content_url
-        contents = [
-            {
+        contents = []
+        for row in rows:
+            content = {
                 "contentID": row[0],
                 "title": row[1],
                 "spotlightnum": row[2],
@@ -143,8 +144,12 @@ def get_user_contents_list():
                 "username": str(row[7]) if row[7] is not None else None,
                 "iconimgpath": normalize_content_url(row[8]) if len(row) > 8 and row[8] else None,
             }
-            for row in rows
-        ]
+
+            # contentpath（メディア本体のURL）も返す（audio/video再生用）
+            if len(row) > 9 and row[9]:
+                content["contentpath"] = normalize_content_url(row[9])
+
+            contents.append(content)
 
         return jsonify({"status": "success", "data": contents}), 200
 
@@ -581,6 +586,7 @@ def get_user_home_api():
         for row in contentdata:
             # DBから取得したパスをCloudFront URLに正規化
             thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
+            contentpath = normalize_content_url(row[7]) if len(row) > 7 and row[7] else None
             contents.append({
                 "contentID": row[0],
                 "title": row[1],
@@ -588,7 +594,8 @@ def get_user_home_api():
                 "posttimestamp": row[3],
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailurl": thumbnailurl
+                "thumbnailurl": thumbnailurl,
+                "contentpath": contentpath,
             })
         data = {
             "username":username,

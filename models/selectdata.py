@@ -330,7 +330,7 @@ def get_user_contents(userID):
             cur.execute("""
                 SELECT c.contentID, c.title, c.spotlightnum, c.posttimestamp, 
                        c.playnum, c.link, c.thumbnailpath,
-                       u.username, u.iconimgpath
+                       u.username, u.iconimgpath, c.contentpath
                 FROM content c
                 JOIN "user" u ON c.userID = u.userID
                 WHERE c.userID = %s
@@ -745,12 +745,13 @@ def get_user_contents_by_username(username):
                 c.posttimestamp, 
                 c.playnum, 
                 c.link, 
-                c.thumbnailpath
+                c.thumbnailpath,
+                c.contentpath
                 FROM content c 
                 LEFT OUTER JOIN "user" u ON c.userid = u.userid
                 WHERE u.username = %s
                 ORDER BY c.posttimestamp DESC
-                """, (username,))
+            """, (username,))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:
