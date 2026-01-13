@@ -306,7 +306,7 @@ def add_comment():
         post_username = user_data["username"]
         commenttext = data.get("commenttext")
         if parentcommentid:
-            commenid = insert_comment(
+            commentid = insert_comment(
                 contentID=contentID,
                 userID=uid,
                 commenttext=commenttext,
