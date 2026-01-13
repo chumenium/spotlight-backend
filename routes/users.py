@@ -7,7 +7,8 @@ from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
-    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id,
+    get_spotlight_num_by_username, get_u
+    ser_contents_by_username, get_bio_by_username, get_user_by_content_id,
     get_blocked_users
 )
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
@@ -201,6 +202,8 @@ def get_play_history_list():
                 "playnum": row[4],
                 "link": row[5],
                 "thumbnailpath": row[6],
+                "username": row[7],
+                "iconimgpath": normalize_content_url(row[8]) if len(row) > 8 and row[8] else None,
             }
             for row in rows
         ]
