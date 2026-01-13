@@ -7,12 +7,14 @@ from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
-    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id
+    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id,
+    get_blocked_users
 )
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
-    insert_search_history, insert_play_history, insert_notification, insert_report
+    insert_search_history, insert_play_history, insert_notification, insert_report,
+    insert_block, delete_block
 )
 from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url, normalize_content_url
 import os
@@ -218,6 +220,66 @@ def get_prolile_data():
         spotlightnum = get_user_spotlightnum(uid)
         return jsonify({"status": "success", "spotlightnum": spotlightnum}), 200
 
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+# ===============================
+# ブロック/ブロック解除
+# ===============================
+@users_bp.route('/block', methods=['POST'])
+@jwt_required
+def block_user():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        target_uid = data.get("target_uid")
+
+        if not target_uid:
+            return jsonify({"status": "error", "message": "target_uidが必要です"}), 400
+        if target_uid == uid:
+            return jsonify({"status": "error", "message": "自分自身はブロックできません"}), 400
+
+        ok = insert_block(uid, target_uid)
+        if not ok:
+            return jsonify({"status": "error", "message": "ブロックに失敗しました"}), 400
+
+        return jsonify({"status": "success", "message": "ブロックしました"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@users_bp.route('/unblock', methods=['POST'])
+@jwt_required
+def unblock_user():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json()
+        target_uid = data.get("target_uid")
+
+        if not target_uid:
+            return jsonify({"status": "error", "message": "target_uidが必要です"}), 400
+
+        ok = delete_block(uid, target_uid)
+        if not ok:
+            return jsonify({"status": "error", "message": "ブロック解除に失敗しました"}), 400
+
+        return jsonify({"status": "success", "message": "ブロックを解除しました"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+@users_bp.route('/blockedusers', methods=['POST'])
+@jwt_required
+def get_blocked_users_api():
+    try:
+        uid = request.user["firebase_uid"]
+        rows = get_blocked_users(uid)
+        result = [
+            {"userID": row[0], "username": row[1]}
+            for row in rows
+        ]
+        return jsonify({"status": "success", "data": result}), 200
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
@@ -537,3 +599,4 @@ def get_user_home_api():
             "status": "error",
             "message": str(e)
         }), 400
+

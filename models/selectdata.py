@@ -420,6 +420,30 @@ def get_playlist_contents(userID, playlistID):
             release_connection(conn)
 
 
+# ブロックしたユーザー一覧を取得
+def get_blocked_users(userID):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    b.blockedUserID,
+                    u.username
+                FROM blocklist b
+                JOIN "user" u ON b.blockedUserID = u.userID
+                WHERE b.userID = %s
+                ORDER BY b.blocktimestamp DESC;
+            """, (userID,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 # 8️⃣ プレイリストタイトル＋先頭サムネイル＋コンテンツ数
 def get_playlists_with_thumbnail(userID):
     conn = None
@@ -468,7 +492,7 @@ def get_playlists_with_thumbnail(userID):
 
 #実装済み
 # 検索一致コンテンツ一覧
-def get_search_contents(word):
+def get_search_contents(word, user_id):
     conn = None
     try:
         conn = get_connection()
@@ -480,7 +504,7 @@ def get_search_contents(word):
 
         # LIKE 条件を動的生成
         like_clauses = []
-        params = []
+        params = [user_id, user_id]  # blocked_users CTE 用
 
         for w in words:
             like_clauses.append("COALESCE(c.title,'') ILIKE %s")
@@ -500,6 +524,15 @@ def get_search_contents(word):
         score_sql = " + ".join(score_cases)
 
         sql = f"""
+            WITH blocked_users AS (
+                SELECT blockedUserID AS userID
+                FROM blocklist
+                WHERE userID = %s
+                UNION
+                SELECT userID
+                FROM blocklist
+                WHERE blockedUserID = %s
+            )
             SELECT 
                 c.contentID, 
                 c.title, 
@@ -512,6 +545,7 @@ def get_search_contents(word):
             FROM contentuser cu
             JOIN content c ON cu.contentID = c.contentID
             WHERE {where_sql}
+              AND c.userID NOT IN (SELECT userID FROM blocked_users)
             ORDER BY score DESC, c.posttimestamp DESC
         """
 
