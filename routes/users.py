@@ -7,8 +7,7 @@ from utils.auth import jwt_required
 from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
-    get_spotlight_num_by_username, get_u
-    ser_contents_by_username, get_bio_by_username, get_user_by_content_id,
+    get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id,
     get_blocked_users
 )
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
