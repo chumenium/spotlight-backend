@@ -207,12 +207,17 @@ def get_play_history_list():
                 "posttimestamp": row[3].strftime("%Y-%m-%d %H:%M:%S") if row[3] else None,
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailpath": row[6],
+                "thumbnailpath": normalize_content_url(row[6]) if len(row) > 6 and row[6] else None,
                 "username": str(row[7]) if row[7] is not None else None,
                 "iconimgpath": normalize_content_url(row[8]) if len(row) > 8 and row[8] else None,
             }
             for row in rows
         ]
+
+        # contentpath（メディア本体のURL）も返す（audio/video再生用）
+        for i, row in enumerate(rows):
+            if len(row) > 9 and row[9]:
+                contents[i]["contentpath"] = normalize_content_url(row[9])
 
         return jsonify({"status": "success", "data": contents}), 200
 

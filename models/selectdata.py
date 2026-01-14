@@ -380,7 +380,7 @@ def get_play_history(userID):
                     SELECT DISTINCT ON (c.contentID)
                         c.contentID, c.title, c.spotlightnum, c.posttimestamp,
                         c.playnum, c.link, c.thumbnailpath,
-                        u.username, u.iconimgpath,
+                        u.username, u.iconimgpath, c.contentpath,
                         p.playID
                     FROM playhistory p
                     JOIN content c ON p.contentID = c.contentID
