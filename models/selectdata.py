@@ -328,11 +328,13 @@ def get_user_contents(userID):
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT contentID, title, spotlightnum, posttimestamp, 
-                       playnum, link, thumbnailpath
-                FROM content
-                WHERE userID = %s
-                ORDER BY posttimestamp DESC
+                SELECT c.contentID, c.title, c.spotlightnum, c.posttimestamp, 
+                       c.playnum, c.link, c.thumbnailpath,
+                       u.username, u.iconimgpath, c.contentpath
+                FROM content c
+                JOIN "user" u ON c.userID = u.userID
+                WHERE c.userID = %s
+                ORDER BY c.posttimestamp DESC
             """, (userID,))
             rows = cur.fetchall()
         return rows
@@ -378,9 +380,11 @@ def get_play_history(userID):
                     SELECT DISTINCT ON (c.contentID)
                         c.contentID, c.title, c.spotlightnum, c.posttimestamp,
                         c.playnum, c.link, c.thumbnailpath,
+                        u.username, u.iconimgpath, c.contentpath,
                         p.playID
                     FROM playhistory p
                     JOIN content c ON p.contentID = c.contentID
+                    JOIN "user" u ON c.userID = u.userID
                     WHERE p.userID = %s
                     ORDER BY c.contentID, p.playID DESC
                 ) AS unique_contents
@@ -455,14 +459,17 @@ def get_playlists_with_thumbnail(userID):
                     p.playlistID,
                     p.title,
                     c.thumbnailpath,
-                    COUNT(pd.contentID) AS content_count
+                    COUNT(pd.contentID) AS content_count,
+                    u.username,
+                    u.iconimgpath
                 FROM playlist p
                 LEFT JOIN playlistdetail pd 
                     ON p.userID = pd.userID AND p.playlistID = pd.playlistID
                 LEFT JOIN content c 
                     ON pd.contentID = c.contentID
+                JOIN "user" u ON p.userID = u.userID
                 WHERE p.userID = %s
-                GROUP BY p.playlistID, p.title, c.thumbnailpath
+                GROUP BY p.playlistID, p.title, c.thumbnailpath, u.username, u.iconimgpath
                 ORDER BY p.playlistID
             """, (userID,))
             
@@ -474,7 +481,9 @@ def get_playlists_with_thumbnail(userID):
                 "playlistID": row[0],
                 "title": row[1],
                 "thumbnailpath": row[2],
-                "content_count": row[3]
+                "content_count": row[3],
+                "username": str(row[4]) if row[4] is not None else None,
+                "iconimgpath": row[5]
             }
             for row in rows
         ]
@@ -736,12 +745,13 @@ def get_user_contents_by_username(username):
                 c.posttimestamp, 
                 c.playnum, 
                 c.link, 
-                c.thumbnailpath
+                c.thumbnailpath,
+                c.contentpath
                 FROM content c 
                 LEFT OUTER JOIN "user" u ON c.userid = u.userid
                 WHERE u.username = %s
                 ORDER BY c.posttimestamp DESC
-                """, (username,))
+            """, (username,))
             rows = cur.fetchall()
         return rows
     except psycopg2.Error as e:

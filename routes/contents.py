@@ -306,7 +306,7 @@ def add_comment():
         post_username = user_data["username"]
         commenttext = data.get("commenttext")
         if parentcommentid:
-            commenid = insert_comment(
+            commentid = insert_comment(
                 contentID=contentID,
                 userID=uid,
                 commenttext=commenttext,
@@ -343,7 +343,7 @@ def add_comment():
 
 
 # ===============================
-# 3️⃣ コンテンツ読み込み
+# 3️⃣ コンテンツ読み込み ・視聴履歴、自分の投稿取得
 # ===============================
 @content_bp.route('/detail', methods=['POST'])
 @jwt_required
@@ -788,7 +788,7 @@ def serch():
 
 
 # ========================================
-# 完全ランダム取得API（ループ対応）
+# 完全ランダム取得API（ループ対応）　・ホーム画面取得
 # ========================================
 @content_bp.route('/getcontents/random', methods=['POST'])
 @jwt_required
