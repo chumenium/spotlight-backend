@@ -10,6 +10,7 @@ from models.selectdata import (
     get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id,
     get_blocked_users
 )
+from models.deletedata import delete_user_account
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -594,6 +595,38 @@ def get_user_home_api():
             "contents":contents
         }
         return jsonify({"status": "success", "data": data}), 200
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
+
+
+# ===============================
+# アカウント削除
+# ===============================
+@users_bp.route('/deleteaccount', methods=['POST'])
+@jwt_required
+def delete_account_api():
+    try:
+        uid = request.user["firebase_uid"]
+        username, _, _, _ = get_user_name_iconpath(uid)
+        
+        # ユーザーアカウントと関連データを削除（DBとS3から）
+        success = delete_user_account(uid)
+        
+        if success:
+            print(f"アカウント削除:{username}")
+            return jsonify({
+                "status": "success",
+                "message": "アカウントを削除しました"
+            }), 200
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "アカウントの削除に失敗しました"
+            }), 500
+        
     except Exception as e:
         return jsonify({
             "status": "error",

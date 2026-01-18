@@ -362,3 +362,156 @@ def delete_notification_contentuser(contentuserCID,contentuserUID):
     finally:
         if conn:
             release_connection(conn)
+
+
+# ============================================
+# ユーザーアカウント削除
+#    → ユーザーの全コンテンツ、アイコンをS3から削除
+#    → DBから全関連データを削除
+# ============================================
+def delete_user_account(userID):
+    conn = None
+    contents_to_delete = []
+    iconpath = None
+    
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            # 削除前にユーザーのコンテンツ一覧とアイコンパスを取得
+            # ① ユーザーの全コンテンツを取得（S3削除用）
+            cur.execute("""
+                SELECT contentID, contentpath, thumbnailpath
+                FROM content
+                WHERE userID = %s
+            """, (userID,))
+            contents_to_delete = cur.fetchall()
+            
+            # ② ユーザーのアイコンパスを取得（S3削除用）
+            cur.execute("""
+                SELECT iconimgpath
+                FROM "user"
+                WHERE userID = %s
+            """, (userID,))
+            icon_row = cur.fetchone()
+            if icon_row:
+                iconpath = icon_row[0]
+            
+            # ===== DB削除処理（外部キー制約の順序を考慮） =====
+            
+            # 1. reports（そのユーザーが報告した/されたもの）
+            cur.execute("""
+                DELETE FROM reports
+                WHERE reportuidID = %s OR targetuidID = %s
+            """, (userID, userID))
+            
+            # 2. notification（そのユーザーに関連する通知）
+            cur.execute("""
+                DELETE FROM notification
+                WHERE userID = %s 
+                   OR contentuserUID = %s 
+                   OR contentuserCID IN (
+                       SELECT contentID FROM content WHERE userID = %s
+                   )
+                   OR comCTID IN (
+                       SELECT contentID FROM content WHERE userID = %s
+                   )
+            """, (userID, userID, userID, userID))
+            
+            # 3. comment（そのユーザーのコメント）
+            cur.execute("""
+                DELETE FROM comment
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 4. contentuser（そのユーザーに関連するもの）
+            cur.execute("""
+                DELETE FROM contentuser
+                WHERE userID = %s OR contentID IN (
+                    SELECT contentID FROM content WHERE userID = %s
+                )
+            """, (userID, userID))
+            
+            # 5. playlistdetail（そのユーザーのプレイリスト詳細）
+            cur.execute("""
+                DELETE FROM playlistdetail
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 6. playlist（そのユーザーのプレイリスト）
+            cur.execute("""
+                DELETE FROM playlist
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 7. playhistory（そのユーザーの再生履歴）
+            cur.execute("""
+                DELETE FROM playhistory
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 8. serchhistory（そのユーザーの検索履歴）
+            cur.execute("""
+                DELETE FROM serchhistory
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 9. content（そのユーザーのコンテンツ）
+            # 注: この時点でcontentuser, comment, notificationなどは既に削除済み
+            cur.execute("""
+                DELETE FROM content
+                WHERE userID = %s
+            """, (userID,))
+            
+            # 10. user（ユーザー本体）
+            cur.execute("""
+                DELETE FROM "user"
+                WHERE userID = %s
+            """, (userID,))
+            
+        conn.commit()
+        
+        # ===== S3からファイルを削除 =====
+        # ① コンテンツファイルを削除
+        for content_row in contents_to_delete:
+            contentpath = content_row[1] if len(content_row) > 1 else None
+            thumbnailpath = content_row[2] if len(content_row) > 2 else None
+            
+            # contentpathを削除
+            if contentpath and (contentpath.startswith('http://') or contentpath.startswith('https://')):
+                try:
+                    delete_file_from_url(contentpath)
+                except Exception as e:
+                    pass
+            
+            # thumbnailpathを削除
+            if thumbnailpath and (thumbnailpath.startswith('http://') or thumbnailpath.startswith('https://')):
+                try:
+                    delete_file_from_url(thumbnailpath)
+                except Exception as e:
+                    pass
+        
+        # ② アイコンファイルを削除（default_icon.pngは削除しない）
+        if iconpath:
+            from utils.s3 import extract_s3_key_from_url
+            icon_key = extract_s3_key_from_url(iconpath)
+            
+            is_default_icon = False
+            if icon_key:
+                filename = icon_key.split("/")[-1] if "/" in icon_key else icon_key
+                is_default_icon = filename == "default_icon.png" or icon_key == "icon/default_icon.png"
+            
+            if not is_default_icon and (iconpath.startswith('http://') or iconpath.startswith('https://')):
+                try:
+                    delete_file_from_url(iconpath)
+                except Exception as e:
+                    pass
+        
+        return True
+        
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
