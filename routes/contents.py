@@ -69,7 +69,7 @@ from models.updatedata import spotlight_on, spotlight_off,add_playnum
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
     get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
-    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num, get_notified
+    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num, get_notified,get_blocked_users
 )
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -508,11 +508,16 @@ def get_comments():
     try:
         data = request.get_json()
         content_id = data.get("contentID")
+        uid = request.user["firebase_uid"]
 
         if not content_id:
             return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
 
         rows = get_comments_by_content(content_id)
+        blocked_users = get_blocked_users(uid)
+
+        # ブロックしたユーザーのusernameのセットを作成
+        blocked_usernames = {blocked_user[1] for blocked_user in blocked_users} if blocked_users else set()
 
         # コメントを辞書リストに変換
         comments = [
@@ -528,11 +533,33 @@ def get_comments():
             for row in rows
         ]
 
+        # ブロックしたユーザーのコメントを除外
+        # ブロックしたユーザーのコメントIDを記録（子コメントも除外するため）
+        blocked_comment_ids = set()
+        filtered_comments = []
+        
+        for c in comments:
+            # ブロックしたユーザーのコメントを除外
+            if c["username"] in blocked_usernames:
+                blocked_comment_ids.add(c["commentID"])
+                continue
+            filtered_comments.append(c)
+
+        # ブロックしたユーザーのコメントに対する子コメント（返信）も除外
+        # また、ブロックしたユーザーが書いた子コメントも除外
+        final_comments = []
+        for c in filtered_comments:
+            parent_id = c["parentcommentID"]
+            # 親コメントがブロックされたコメントの場合は除外
+            if parent_id and parent_id in blocked_comment_ids:
+                continue
+            final_comments.append(c)
+
         # === スレッド構造に整形 ===
-        comment_dict = {c["commentID"]: c for c in comments}
+        comment_dict = {c["commentID"]: c for c in final_comments}
         root_comments = []
 
-        for c in comments:
+        for c in final_comments:
             parent_id = c["parentcommentID"]
             if parent_id and parent_id in comment_dict:
                 comment_dict[parent_id]["replies"].append(c)
