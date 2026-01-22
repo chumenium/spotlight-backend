@@ -802,6 +802,35 @@ def get_notified(contentid, uid):
         if conn:
             release_connection(conn)
 
+
+def get_achievements_value(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) as spotlitghnum FROM contentuser cu WHERE userID = %s AND spotlightflag = True', (uid,))
+            spotlightnum = cur.fetchone()
+            cur.execute('SELECT COUNT(*) as commentnum FROM comment cm WHERE userID = %s', (uid,))
+            commentnum = cur.fetchone()
+            cur.execute('SELECT COUNT(*) as contentnum FROM content c WHERE userID = %s', (uid,))
+            contentnum = cur.fetchone()
+            cur.execute('SELECT SUM(c.playnum) as plyanum FROM content c WHERE userID = %s', (uid,))
+            plyanum = cur.fetchone()
+        return spotlightnum, commentnum, contentnum, plyanum
+    except psycopg2.Error as e:
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+
+
+# SELECT COUNT(*) as spotlitghnum FROM contentuser cu WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2' AND spotlightflag = True;
+# SELECT COUNT(*) as commentnum FROM comment cm WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
+# SELECT COUNT(*) as contentnum FROM content c WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
+# SELECT SUM(c.playnum) as plyanum FROM content c WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
+
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
 # print("-----------------------------指定したコンテンツの詳細------------------------------------")

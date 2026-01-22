@@ -8,7 +8,7 @@ from models.selectdata import (
     get_user_name_iconpath,get_search_history,get_user_contents,get_spotlight_contents,
     get_play_history,get_user_spotlightnum,get_notification,get_unloaded_num,get_spotlight_num,
     get_spotlight_num_by_username, get_user_contents_by_username, get_bio_by_username, get_user_by_content_id,
-    get_blocked_users
+    get_blocked_users, get_achievements_value
 )
 from models.deletedata import delete_user_account
 from models.updatedata import enable_notification, disable_notification,chenge_icon, update_bio
@@ -649,3 +649,27 @@ def delete_account_api():
             "message": str(e)
         }), 400
 
+
+@users_bp.route('/getAchievements', methods=['POST'])
+@jwt_required
+def get_achievements_api():
+    #自分が何回スポットライトしたか
+    #自分が何回コメントを送信したか
+    #自分が何回投稿したか
+    #自分の投稿の視聴回数
+    try:
+        uid = request.user["firebase_uid"]
+        spotlightnum, commentnum, contentnum, plyanum = get_achievements_value(uid)
+        data = {
+            "spotlightnum":spotlightnum,
+            "commentnum":commentnum,
+            "contentnum":contentnum,
+            "plyanum": plyanum
+        }
+        return jsonify({"status": "success", "data": data}), 200
+        
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 400
