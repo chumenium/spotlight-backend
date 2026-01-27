@@ -147,6 +147,40 @@ def add_playnum(contentID):
         if conn:
             release_connection(conn)
 
+#----------------投稿のタイトル・タグを更新（自分の投稿のみ）----------------
+def update_content_title_tag(contentID, userID, title=None, tag=None):
+    """投稿の title / tag を更新。WHERE userID で自分の投稿のみ。"""
+    if title is None and tag is None:
+        return False
+    conn = None
+    try:
+        conn = get_connection()
+        sets = []
+        params = []
+        if title is not None:
+            sets.append("title = %s")
+            params.append(title)
+        if tag is not None:
+            sets.append("tag = %s")
+            params.append(tag)
+        params.extend([contentID, userID])
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE content SET " + ", ".join(sets) + " WHERE contentID = %s AND userID = %s",
+                params
+            )
+            updated = cur.rowcount
+        conn.commit()
+        return updated > 0
+    except psycopg2.Error as e:
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
+
+
 #----------------自己紹介文を更新----------------
 def update_bio(userID, bio):
     """自己紹介文を更新"""

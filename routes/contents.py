@@ -65,7 +65,7 @@ def infer_content_type(contentpath, textflag):
     # デフォルトはテキスト
     return "text"
 
-from models.updatedata import spotlight_on, spotlight_off,add_playnum
+from models.updatedata import spotlight_on, spotlight_off, add_playnum, update_content_title_tag
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
     get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
@@ -289,6 +289,44 @@ def add_content():
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+# ===============================
+# 1.5️⃣ 自分の投稿を編集（タイトル・タグ）
+# ===============================
+@content_bp.route("/edit", methods=["PATCH", "PUT"])
+@jwt_required
+def edit_content():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json() or {}
+        contentID = data.get("contentID")
+        if contentID is None:
+            return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
+        if "title" not in data and "tag" not in data:
+            return jsonify({"status": "error", "message": "title または tag のいずれかは指定してください"}), 400
+
+        content_user = get_user_by_content_id(contentID)
+        if not content_user:
+            return jsonify({"status": "error", "message": "投稿が見つかりません"}), 404
+        if content_user["userID"] != uid:
+            return jsonify({"status": "error", "message": "自分の投稿のみ編集できます"}), 403
+
+        title = data.get("title") if "title" in data else None
+        tag = data.get("tag") if "tag" in data else None
+        if tag is not None:
+            tag = tag.replace("#", "")
+
+        ok = update_content_title_tag(contentID, uid, title=title, tag=tag)
+        if not ok:
+            return jsonify({"status": "error", "message": "更新に失敗しました"}), 500
+
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"投稿編集:{username}:contentID={contentID}")
+        return jsonify({"status": "success", "message": "投稿を更新しました"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
 
 # ===============================
 # 2️⃣ コメント追加
