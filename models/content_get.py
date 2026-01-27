@@ -254,7 +254,7 @@ def get_content_random_5(uid, exclude_content_ids=None):
             
             params.extend([uid])  # contentuser JOIN用
             
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT 
                     c.title, 
                     c.contentpath, 
@@ -305,7 +305,7 @@ def get_content_id_range(uid):
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            query = _get_blocked_users_cte() + """
+            query = _get_one_way_blocked_users_cte() + """
                 SELECT MIN(c.contentID), MAX(c.contentID), COUNT(*)
                 FROM content c
                 WHERE (c.textflag = FALSE OR c.textflag IS NULL)
