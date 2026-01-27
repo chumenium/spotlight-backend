@@ -291,3 +291,55 @@ def content_management():
 # #             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
 #     except Exception as e:
 # #         return jsonify({"status": "error", "message": str(e)}), 400
+
+
+from utils.notification import send_push_notification
+from models.selectdata import get_user_by_id
+from models.admin_sql import get_all_user_token
+from models.createdata import insert_notification
+#システムからの通知
+@admin_bp.route('/adminnotification', methods=['POST'])
+@jwt_required
+def admin_send_notification():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            data = request.get_json()
+            message = data.get("message")
+            title = data.get("title")
+            targetuid = data.get("targetuid")
+            if targetuid == "all":
+                users = get_all_user_token()
+                for user in users:
+                    token = user.get("token")
+                    enabled = user.get("notificationenabled", True)
+                    if not token or not enabled:
+                        continue
+                    send_push_notification(token, title, message)
+                    insert_notification(
+                        userID=user.get("userID"),
+                        notificationtext=message,
+                        notificationtitle=title
+                    )
+                return jsonify({
+                    "status": "success",
+                    "message": "通知を送信しました"
+                }), 200
+            else:
+                user = get_user_by_id(targetuid)
+                if not user or not user.get("token") or not user.get("notificationenabled", True):
+                    return jsonify({"status": "error", "message": "通知送信対象が無効です"}), 400
+                send_push_notification(user["token"], title, message)
+                insert_notification(
+                    userID=user["userID"],
+                    notificationtext=message,
+                    notificationtitle=title
+                )
+                return jsonify({
+                    "status": "success",
+                    "message": "通知を送信しました"
+                }), 200
+        else:
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
