@@ -461,7 +461,7 @@ def get_notification_api():
                 title = notificationtitle
                 text = notificationtext
                 thumbnailpath = None
-                iconpath = "ここにシステム通知用のアイコンファイルパスを設定"
+                iconpath = "https://d30se1secd7t6t.cloudfront.net/icon/default_icon.png"
                 contentID = None
             elif comCTID:  # コメント通知
                 contenttitle = comment_content_title

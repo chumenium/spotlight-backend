@@ -194,3 +194,35 @@ def get_content_data(offset):
     finally:
         if conn:
             release_connection(conn)
+
+#全ユーザのトークン取得（通知有効フラグ付き）
+def get_all_user_token():
+    """
+    通知送信用に userID / token / notificationenabled を返す
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT userID, token, notificationenabled
+                  FROM "user"
+                 ORDER BY id ASC;
+                """
+            )
+            rows = cur.fetchall()
+        # 辞書形式で返却
+        return [
+            {
+                "userID": row[0],
+                "token": row[1],
+                "notificationenabled": row[2],
+            }
+            for row in rows
+        ]
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
