@@ -342,81 +342,81 @@ def add_comment():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
-# ===============================
-# 3️⃣ コンテンツ読み込み ・視聴履歴、自分の投稿取得
-# ===============================
-@content_bp.route('/detail', methods=['POST'])
-@jwt_required
-@debounce_request(ttl=0.5)  # 0.5秒以内の重複リクエストを無視
-def content_detail():
-    try:
-        uid = request.user["firebase_uid"]
-        data = request.get_json() or {}
-        contentID = data.get("contentID")
+# # ===============================
+# # 3️⃣ コンテンツ読み込み ・視聴履歴、自分の投稿取得
+# # ===============================
+# @content_bp.route('/detail', methods=['POST'])
+# @jwt_required
+# @debounce_request(ttl=0.5)  # 0.5秒以内の重複リクエストを無視
+# def content_detail():
+#     try:
+#         uid = request.user["firebase_uid"]
+#         data = request.get_json() or {}
+#         contentID = data.get("contentID")
         
-        # contentIDが指定されていない場合はデータベースからランダムなコンテンツを取得
-        if contentID is None:
-            from models.selectdata import get_random_content_id
+#         # contentIDが指定されていない場合はデータベースからランダムなコンテンツを取得
+#         if contentID is None:
+#             from models.selectdata import get_random_content_id
             
-            # データベースからランダムなcontentIDを取得（S3への直接アクセスを避ける）
-            nextcontentID = get_random_content_id()
+#             # データベースからランダムなcontentIDを取得（S3への直接アクセスを避ける）
+#             nextcontentID = get_random_content_id()
             
-            if not nextcontentID:
-                return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
+#             if not nextcontentID:
+#                 return jsonify({"status": "error", "message": "読み込み可能なコンテンツがありません"}), 200
             
-            # データベースからコンテンツ詳細を取得
-            detail = get_content_detail(nextcontentID)
-            if not detail:
-                return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
-        else:
-            # 指定されたcontentIDを使用（後方互換性のため）
-            nextcontentID = contentID
-            detail = get_content_detail(nextcontentID)
-            if not detail:
-                return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
+#             # データベースからコンテンツ詳細を取得
+#             detail = get_content_detail(nextcontentID)
+#             if not detail:
+#                 return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
+#         else:
+#             # 指定されたcontentIDを使用（後方互換性のため）
+#             nextcontentID = contentID
+#             detail = get_content_detail(nextcontentID)
+#             if not detail:
+#                 return jsonify({"status": "error", "message": "コンテンツが見つかりません"}), 404
         
 
-        # nextcontentIDがNoneの場合はspotlightflagをFalseに設定
-        if nextcontentID is not None:
-            spotlightflag = get_user_spotlight_flag(uid, nextcontentID)
-        else:
-            spotlightflag = False
+#         # nextcontentIDがNoneの場合はspotlightflagをFalseに設定
+#         if nextcontentID is not None:
+#             spotlightflag = get_user_spotlight_flag(uid, nextcontentID)
+#         else:
+#             spotlightflag = False
         
-        # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
-        contentpath = normalize_content_url(detail[1]) if detail[1] else None
-        thumbnailpath = normalize_content_url(detail[9]) if len(detail) > 9 and detail[9] else None
+#         # DBから取得したパスをCloudFront URLに正規化（既存データの互換性のため）
+#         contentpath = normalize_content_url(detail[1]) if detail[1] else None
+#         thumbnailpath = normalize_content_url(detail[9]) if len(detail) > 9 and detail[9] else None
         
-        # デバッグ用のprint文を削除（コスト削減のため）
-        commentnum = get_comment_num(nextcontentID)
+#         # デバッグ用のprint文を削除（コスト削減のため）
+#         commentnum = get_comment_num(nextcontentID)
         
-        # アイコンパスをCloudFront URLに正規化
-        iconimgpath = normalize_content_url(detail[7]) if len(detail) > 7 and detail[7] else None
+#         # アイコンパスをCloudFront URLに正規化
+#         iconimgpath = normalize_content_url(detail[7]) if len(detail) > 7 and detail[7] else None
         
-        # 投稿取得ログ
-        username, _, _, _ = get_user_name_iconpath(uid)
-        content_title = detail[0]
-        print(f"投稿取得:{username}:\"{truncate_title(content_title)}\"")
+#         # 投稿取得ログ
+#         username, _, _, _ = get_user_name_iconpath(uid)
+#         content_title = detail[0]
+#         print(f"投稿取得:{username}:\"{truncate_title(content_title)}\"")
         
-        return jsonify({
-            "status": "success",
-            "data": {
-                "title": detail[0],
-                "contentpath": contentpath,
-                "thumbnailpath": thumbnailpath,
-                "spotlightnum": detail[2],
-                "posttimestamp": detail[3].isoformat(),
-                "playnum": detail[4],
-                "link": detail[5],
-                "username": detail[6],
-                "iconimgpath": iconimgpath,
-                "spotlightflag": spotlightflag,
-                "textflag":detail[8],
-                "nextcontentid": nextcontentID,
-                "commentnum":commentnum
-            }
-        }), 200
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+#         return jsonify({
+#             "status": "success",
+#             "data": {
+#                 "title": detail[0],
+#                 "contentpath": contentpath,
+#                 "thumbnailpath": thumbnailpath,
+#                 "spotlightnum": detail[2],
+#                 "posttimestamp": detail[3].isoformat(),
+#                 "playnum": detail[4],
+#                 "link": detail[5],
+#                 "username": detail[6],
+#                 "iconimgpath": iconimgpath,
+#                 "spotlightflag": spotlightflag,
+#                 "textflag":detail[8],
+#                 "nextcontentid": nextcontentID,
+#                 "commentnum":commentnum
+#             }
+#         }), 200
+#     except Exception as e:
+#         return jsonify({"status": "error", "message": str(e)}), 400
 
 
 #===============================
