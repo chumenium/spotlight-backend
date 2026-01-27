@@ -666,7 +666,7 @@ def get_achievements_api():
             "contentnum":contentnum,
             "plyanum": plyanum
         }
-        print(spotlightnum,commentnum,contentnum,plyanum)
+        #print(spotlightnum,commentnum,contentnum,plyanum)
         return jsonify({"status": "success", "data": data}), 200
         
     except Exception as e:
