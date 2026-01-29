@@ -297,22 +297,21 @@ def get_comments_by_content(contentID):
 
 
 #実装済み
-# 4️⃣ 検索履歴一覧を取得
+# 4️⃣ 検索履歴一覧を取得（直近で検索した順・上から表示）
 def get_search_history(userID):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT DISTINCT ON (serchword)
-                    serchword
+                SELECT serchID, serchword
                 FROM serchhistory
                 WHERE userID = %s
-                ORDER BY serchword, serchID DESC
+                ORDER BY serchID DESC
                 LIMIT 10;
             """, (userID,))
             rows = cur.fetchall()
-        return [r[0] for r in rows]
+        return [{"serchID": r[0], "query": r[1]} for r in rows]
     except psycopg2.Error as e:
         return []
     finally:

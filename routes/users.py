@@ -80,7 +80,7 @@ def get_username():
 def get_searchhistory():
     try:
         uid = request.user["firebase_uid"]
-        searchhistory = get_search_history(uid)  # ["検索ワード1", "検索ワード2", ...]
+        searchhistory = get_search_history(uid)  # [{"serchID": 1, "query": "検索ワード"}, ...] 直近順
         return jsonify({
             "status": "success",
             "data": searchhistory
