@@ -310,12 +310,17 @@ def admin_send_notification():
             targetuid = data.get("targetuid")
             if targetuid == "all":
                 users = get_all_user_token()
+                tokens = []
                 for user in users:
                     token = user.get("token")
                     enabled = user.get("notificationenabled", True)
                     if not token or not enabled:
                         continue
-                    send_push_notification(token, title, message)
+                    #同一端末に複数アカウントがある場合一度のみプッシュ通知を行う
+                    if not(token in tokens):
+                        send_push_notification(token, title, message)
+                        tokens.append(token)
+                        
                     insert_notification(
                         userID=user.get("userID"),
                         notificationtext=message,
