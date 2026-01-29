@@ -710,11 +710,12 @@ def serch():
         if not rows:
             return jsonify({"status": "success", "message": "該当するコンテンツがありません", "data": []}), 200
 
-        # Dartで扱いやすいように整形
+        # Dartで扱いやすいように整形（ユーザー名・アイコン含む）
         result = []
         for row in rows:
-            # DBから取得したパスをCloudFront URLに正規化
             thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
+            username = row[7] if len(row) > 7 else ''
+            iconimgpath = row[8] if len(row) > 8 else ''
             result.append({
                 "contentID": row[0],
                 "title": row[1],
@@ -722,7 +723,9 @@ def serch():
                 "posttimestamp": row[3],
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailurl": thumbnailurl
+                "thumbnailurl": thumbnailurl,
+                "username": username,
+                "iconimgpath": iconimgpath or '',
             })
 
         return jsonify({

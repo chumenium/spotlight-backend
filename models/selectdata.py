@@ -549,9 +549,12 @@ def get_search_contents(word, user_id):
                 c.playnum, 
                 c.link, 
                 c.thumbnailpath,
+                u.username,
+                u.iconimgpath,
                 ({score_sql}) AS score
             FROM contentuser cu
             JOIN content c ON cu.contentID = c.contentID
+            JOIN "user" u ON c.userID = u.userID
             WHERE {where_sql}
               AND c.userID NOT IN (SELECT userID FROM blocked_users)
             ORDER BY score DESC, c.posttimestamp DESC
