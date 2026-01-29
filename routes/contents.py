@@ -710,17 +710,19 @@ def serch():
         if not rows:
             return jsonify({"status": "success", "message": "該当するコンテンツがありません", "data": []}), 200
 
-        # Dartで扱いやすいように整形（ユーザー名・アイコン含む）
+        # Dartで扱いやすいように整形（視聴履歴APIと同じ形式で posttimestamp を文字列化）
         result = []
         for row in rows:
             thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
             username = row[7] if len(row) > 7 else ''
             iconimgpath = row[8] if len(row) > 8 else ''
+            pt = row[3]
+            posttimestamp = pt.strftime("%Y-%m-%d %H:%M:%S") if pt else None
             result.append({
                 "contentID": row[0],
                 "title": row[1],
                 "spotlightnum": row[2],
-                "posttimestamp": row[3],
+                "posttimestamp": posttimestamp,
                 "playnum": row[4],
                 "link": row[5],
                 "thumbnailurl": thumbnailurl,
