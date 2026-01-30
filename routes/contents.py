@@ -385,7 +385,7 @@ def add_comment():
 # # ===============================
 @content_bp.route('/detail', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=0.5)  # 0.5秒以内の重複リクエストを無視
+@debounce_request(ttl=0.3)  # 0.5秒以内の重複リクエストを無視
 def content_detail():
     try:
         uid = request.user["firebase_uid"]
@@ -861,7 +861,7 @@ def serch():
 # ========================================
 @content_bp.route('/getcontents/random', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=3.0)  # 3秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
+@debounce_request(ttl=0.3)  # 3秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_random_api():
     """
     完全ランダムで3件取得（重複なし、ループ対応）
