@@ -192,8 +192,8 @@ def add_content():
                     "message": "必要なデータが不足しています"
                 }), 400
 
-            # --- orientationチェック（動画のみ必須） ---
-            orientation_value = None
+            # --- orientationチェック（動画のみ必須、画像/音声はunknown） ---
+            orientation_value = "unknown"  # 画像・音声用デフォルト（DBのorientation NOT NULL対策）
             if content_type == "video":
                 if orientation is None:
                     return jsonify({

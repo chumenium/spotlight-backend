@@ -26,6 +26,7 @@ def add_content_and_link_to_users(contentpath, link, title, userID, thumbnailpat
             """, (content_id,))
 
             conn.commit()
+        return content_id
 
     except psycopg2.Error as e:
         if conn:
