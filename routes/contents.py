@@ -176,6 +176,7 @@ def add_content():
         title = data.get("title")
         link = data.get("link")
         tag = data.get("tag")
+        orientation = data.get("orientation")
         # デバッグ用のprint文を削除（コスト削減のため）
         if not(tag == None):
             tag = tag.replace("#", "")
@@ -190,6 +191,20 @@ def add_content():
                     "status": "error",
                     "message": "必要なデータが不足しています"
                 }), 400
+
+            # --- orientationチェック（動画のみ必須） ---
+            orientation_value = None
+            if content_type == "video":
+                if orientation is None:
+                    return jsonify({
+                        "status": "error",
+                        "message": "orientation が必要です"
+                    }), 400
+                orientation_str = str(orientation).strip().lower()
+                if orientation_str in ["portrait", "landscape"]:
+                    orientation_value = orientation_str
+                else:
+                    orientation_value = "unknown"
 
             # --- フォルダマッピング ---
             subdirs = {
@@ -225,12 +240,16 @@ def add_content():
             content_mime = get_content_type_from_extension(content_type, ext)
             
             # コンテンツ本体をS3にアップロード
+            content_metadata = None
+            if content_type == "video":
+                content_metadata = {"orientation": orientation_value}
             content_key = upload_to_s3(
                 file_data=content_binary,
                 folder=content_folder,
                 filename=content_filename,
                 content_type=content_mime,
-                bucket_name=content_bucket
+                bucket_name=content_bucket,
+                metadata=content_metadata
             )
 
             # サムネイルをS3にアップロード
@@ -245,14 +264,16 @@ def add_content():
             content_url = get_cloudfront_url(content_folder, content_filename)
             thumb_url = get_cloudfront_url("thumbnail", thumb_filename)
 
-            # --- DB登録（CloudFront URLを保存） ---
+            # --- DB登録（contentpathはmp4キーを保存） ---
+            contentpath_to_save = content_key if content_type == "video" else content_url
             content_id = add_content_and_link_to_users(
-                contentpath=content_url,
+                contentpath=contentpath_to_save,
                 thumbnailpath=thumb_url,
                 link=link,
                 title=title,
                 userID=uid,
-                tag=tag
+                tag=tag,
+                orientation=orientation_value
             )
             print(f"投稿作成:{username}:\"{truncate_title(title)}\"")
         else:
@@ -274,8 +295,9 @@ def add_content():
                 "message": "コンテンツを追加しました。",
                 "data": {
                     "contentID": content_id,
-                    "contentpath": content_url,
-                    "thumbnailpath": thumb_url
+                    "contentpath": contentpath_to_save,
+                    "thumbnailpath": thumb_url,
+                    "orientation": orientation_value
                 }
             }), 200
         else:
