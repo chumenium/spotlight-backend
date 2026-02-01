@@ -94,16 +94,24 @@ def delete_playlist(uid, playlistID):
 
 # ============================================
 # 4. 検索履歴を削除（serchhistory）
+# serchID（数値）の場合はその1行を削除、文字列の場合は従来通り serchword で削除（後方互換）
 # ============================================
 def delete_serch_history(uid, serchID):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
-            cur.execute("""
-                DELETE FROM serchhistory
-                WHERE userID = %s AND serchword = %s
-            """, (uid, serchID))
+            try:
+                sid = int(serchID)
+                cur.execute("""
+                    DELETE FROM serchhistory
+                    WHERE userID = %s AND serchID = %s
+                """, (uid, sid))
+            except (TypeError, ValueError):
+                cur.execute("""
+                    DELETE FROM serchhistory
+                    WHERE userID = %s AND serchword = %s
+                """, (uid, serchID))
         conn.commit()
 
     except psycopg2.Error as e:

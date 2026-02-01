@@ -269,7 +269,7 @@ def get_content_random_5(uid, exclude_content_ids=None):
                     c.thumbnailpath,
                     cu.spotlightflag, 
                     COALESCE(comment_counts.commentnum, 0) AS commentnum, 
-                    c.contentid
+                    COALESCE(c.contentID, 0) AS contentID
                 FROM content c
                 JOIN "user" u1 ON c.userID = u1.userID
                 LEFT JOIN contentuser cu 

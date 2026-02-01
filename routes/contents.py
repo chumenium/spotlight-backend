@@ -65,11 +65,11 @@ def infer_content_type(contentpath, textflag):
     # デフォルトはテキスト
     return "text"
 
-from models.updatedata import spotlight_on, spotlight_off,add_playnum
+from models.updatedata import spotlight_on, spotlight_off, add_playnum, update_content_title_tag
 from models.selectdata import (
     get_content_detail,get_user_spotlight_flag,get_comments_by_content,get_play_content_id,
     get_search_contents, get_playlists_with_thumbnail, get_playlist_contents, get_user_name_iconpath,
-    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num, get_notified
+    get_user_by_content_id, get_user_by_id, get_user_by_parentcomment_id, get_comment_num, get_notified,get_blocked_users
 )
 from models.createdata import (
     add_content_and_link_to_users, insert_comment, insert_playlist, insert_playlist_detail,
@@ -312,6 +312,44 @@ def add_content():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 400
 
+
+# ===============================
+# 1.5️⃣ 自分の投稿を編集（タイトル・タグ）
+# ===============================
+@content_bp.route("/edit", methods=["PATCH", "PUT"])
+@jwt_required
+def edit_content():
+    try:
+        uid = request.user["firebase_uid"]
+        data = request.get_json() or {}
+        contentID = data.get("contentID")
+        if contentID is None:
+            return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
+        if "title" not in data and "tag" not in data:
+            return jsonify({"status": "error", "message": "title または tag のいずれかは指定してください"}), 400
+
+        content_user = get_user_by_content_id(contentID)
+        if not content_user:
+            return jsonify({"status": "error", "message": "投稿が見つかりません"}), 404
+        if content_user["userID"] != uid:
+            return jsonify({"status": "error", "message": "自分の投稿のみ編集できます"}), 403
+
+        title = data.get("title") if "title" in data else None
+        tag = data.get("tag") if "tag" in data else None
+        if tag is not None:
+            tag = tag.replace("#", "")
+
+        ok = update_content_title_tag(contentID, uid, title=title, tag=tag)
+        if not ok:
+            return jsonify({"status": "error", "message": "更新に失敗しました"}), 500
+
+        username, _, _, _ = get_user_name_iconpath(uid)
+        print(f"投稿編集:{username}:contentID={contentID}")
+        return jsonify({"status": "success", "message": "投稿を更新しました"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
 # ===============================
 # 2️⃣ コメント追加
 # ===============================
@@ -364,12 +402,12 @@ def add_comment():
         return jsonify({"status": "error", "message": str(e)}), 400
 
 
-# ===============================
-# 3️⃣ コンテンツ読み込み ・視聴履歴、自分の投稿取得
-# ===============================
+# # ===============================
+# # 3️⃣ コンテンツ読み込み ・視聴履歴、自分の投稿取得
+# # ===============================
 @content_bp.route('/detail', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=0.5)  # 0.5秒以内の重複リクエストを無視
+@debounce_request(ttl=0.3)  # 0.5秒以内の重複リクエストを無視
 def content_detail():
     try:
         uid = request.user["firebase_uid"]
@@ -446,7 +484,6 @@ def content_detail():
 #===============================
 @content_bp.route('/playnum', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=1.0)  # 1秒以内の重複リクエストを無視（スクロール中の重複呼び出しを防ぐ）
 def playnum_add_route():
     try:
         uid = request.user["firebase_uid"]
@@ -530,11 +567,16 @@ def get_comments():
     try:
         data = request.get_json()
         content_id = data.get("contentID")
+        uid = request.user["firebase_uid"]
 
         if not content_id:
             return jsonify({"status": "error", "message": "contentIDが指定されていません"}), 400
 
         rows = get_comments_by_content(content_id)
+        blocked_users = get_blocked_users(uid)
+
+        # ブロックしたユーザーのusernameのセットを作成
+        blocked_usernames = {blocked_user[1] for blocked_user in blocked_users} if blocked_users else set()
 
         # コメントを辞書リストに変換
         comments = [
@@ -550,11 +592,33 @@ def get_comments():
             for row in rows
         ]
 
+        # ブロックしたユーザーのコメントを除外
+        # ブロックしたユーザーのコメントIDを記録（子コメントも除外するため）
+        blocked_comment_ids = set()
+        filtered_comments = []
+        
+        for c in comments:
+            # ブロックしたユーザーのコメントを除外
+            if c["username"] in blocked_usernames:
+                blocked_comment_ids.add(c["commentID"])
+                continue
+            filtered_comments.append(c)
+
+        # ブロックしたユーザーのコメントに対する子コメント（返信）も除外
+        # また、ブロックしたユーザーが書いた子コメントも除外
+        final_comments = []
+        for c in filtered_comments:
+            parent_id = c["parentcommentID"]
+            # 親コメントがブロックされたコメントの場合は除外
+            if parent_id and parent_id in blocked_comment_ids:
+                continue
+            final_comments.append(c)
+
         # === スレッド構造に整形 ===
-        comment_dict = {c["commentID"]: c for c in comments}
+        comment_dict = {c["commentID"]: c for c in final_comments}
         root_comments = []
 
-        for c in comments:
+        for c in final_comments:
             parent_id = c["parentcommentID"]
             if parent_id and parent_id in comment_dict:
                 comment_dict[parent_id]["replies"].append(c)
@@ -667,19 +731,24 @@ def serch():
         if not rows:
             return jsonify({"status": "success", "message": "該当するコンテンツがありません", "data": []}), 200
 
-        # Dartで扱いやすいように整形
+        # Dartで扱いやすいように整形（視聴履歴APIと同じ形式で posttimestamp を文字列化）
         result = []
         for row in rows:
-            # DBから取得したパスをCloudFront URLに正規化
             thumbnailurl = normalize_content_url(row[6]) if len(row) > 6 and row[6] else None
+            username = row[7] if len(row) > 7 else ''
+            iconimgpath = row[8] if len(row) > 8 else ''
+            pt = row[3]
+            posttimestamp = pt.strftime("%Y-%m-%d %H:%M:%S") if pt else None
             result.append({
                 "contentID": row[0],
                 "title": row[1],
                 "spotlightnum": row[2],
-                "posttimestamp": row[3],
+                "posttimestamp": posttimestamp,
                 "playnum": row[4],
                 "link": row[5],
-                "thumbnailurl": thumbnailurl
+                "thumbnailurl": thumbnailurl,
+                "username": username,
+                "iconimgpath": iconimgpath or '',
             })
 
         return jsonify({
@@ -814,7 +883,7 @@ def serch():
 # ========================================
 @content_bp.route('/getcontents/random', methods=['POST'])
 @jwt_required
-@debounce_request(ttl=3.0)  # 3秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
+@debounce_request(ttl=0.3)  # 3秒以内の重複リクエストを無視（スクロール中の重複取得を防ぐ）
 def get_content_random_api():
     """
     完全ランダムで3件取得（重複なし、ループ対応）

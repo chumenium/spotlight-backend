@@ -297,22 +297,21 @@ def get_comments_by_content(contentID):
 
 
 #実装済み
-# 4️⃣ 検索履歴一覧を取得
+# 4️⃣ 検索履歴一覧を取得（直近で検索した順・上から表示）
 def get_search_history(userID):
     conn = None
     try:
         conn = get_connection()
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT DISTINCT ON (serchword)
-                    serchword
+                SELECT serchID, serchword
                 FROM serchhistory
                 WHERE userID = %s
-                ORDER BY serchword, serchID DESC
+                ORDER BY serchID DESC
                 LIMIT 10;
             """, (userID,))
             rows = cur.fetchall()
-        return [r[0] for r in rows]
+        return [{"serchID": r[0], "query": r[1]} for r in rows]
     except psycopg2.Error as e:
         return []
     finally:
@@ -550,9 +549,12 @@ def get_search_contents(word, user_id):
                 c.playnum, 
                 c.link, 
                 c.thumbnailpath,
+                u.username,
+                u.iconimgpath,
                 ({score_sql}) AS score
             FROM contentuser cu
             JOIN content c ON cu.contentID = c.contentID
+            JOIN "user" u ON c.userID = u.userID
             WHERE {where_sql}
               AND c.userID NOT IN (SELECT userID FROM blocked_users)
             ORDER BY score DESC, c.posttimestamp DESC
@@ -801,6 +803,35 @@ def get_notified(contentid, uid):
     finally:
         if conn:
             release_connection(conn)
+
+
+def get_achievements_value(uid):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute('SELECT COUNT(*) as spotlitghnum FROM contentuser cu WHERE userID = %s AND spotlightflag = True', (uid,))
+            spotlightnum = cur.fetchone()
+            cur.execute('SELECT COUNT(*) as commentnum FROM comment cm WHERE userID = %s', (uid,))
+            commentnum = cur.fetchone()
+            cur.execute('SELECT COUNT(*) as contentnum FROM content c WHERE userID = %s', (uid,))
+            contentnum = cur.fetchone()
+            cur.execute('SELECT SUM(c.playnum) as plyanum FROM content c WHERE userID = %s', (uid,))
+            plyanum = cur.fetchone()
+        return spotlightnum, commentnum, contentnum, plyanum
+    except psycopg2.Error as e:
+        return False
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+
+
+# SELECT COUNT(*) as spotlitghnum FROM contentuser cu WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2' AND spotlightflag = True;
+# SELECT COUNT(*) as commentnum FROM comment cm WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
+# SELECT COUNT(*) as contentnum FROM content c WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
+# SELECT SUM(c.playnum) as plyanum FROM content c WHERE userID = '24m1kumuhUaYZOKyH3YraLLzFnX2';
 
 # print("-----------------------------全てのコンテンツID------------------------------------")
 # print(get_content_id())
