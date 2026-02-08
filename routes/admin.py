@@ -6,6 +6,7 @@ from datetime import datetime
 from utils.auth import jwt_required
 from models.admin_sql import (
     get_all_user_data, uid_admin_auth, disable_admin, enable_admin, get_reports_data,process_report,unprocess_report,get_content_data
+    ,statistics_data,get_users_desc_limit10,get_contents_desc_limit10
 )
 from models.deletedata import (
     delete_content_by_admin,delete_comment
@@ -344,6 +345,88 @@ def admin_send_notification():
                     "status": "success",
                     "message": "通知を送信しました"
                 }), 200
+        else:
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#統計情報を取得
+@admin_bp.route('/statistics', methods=['POST'])
+@jwt_required
+def get_statistics_api():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            statistics = statistics_data()
+            total_users = statistics[0][0]
+            total_contents = statistics[0][1]
+            return jsonify({
+                "status": "success",
+                "total_users" :total_users,
+                "total_contents" :total_contents
+            }), 200
+        else:
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#最新ユーザーを取得
+@admin_bp.route('/getusersdesclimit10', methods=['POST'])
+@jwt_required
+def get_users_desc_limit10_api():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            data = request.get_json()
+            offset = data.get("offset", 0) or 0
+            userdatas = []
+            datas = get_users_desc_limit10(offset)
+            for row in datas:
+                userdatas.append({ 
+                    "userID": row[0],       #ユーザのID
+                    "username": row[1],     #ユーザ名
+                    "iconimgpath": row[2],  #ユーザアイコンのURL
+                })
+            return jsonify({
+                "status": "success",
+                "userdatas" :userdatas
+            }), 200
+        else:
+            return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+
+#最新コンテンツを取得
+@admin_bp.route('/getcontentsdesclimit10', methods=['POST'])
+@jwt_required
+def get_contents_desc_limit10_api():
+    try:
+        uid = request.user["firebase_uid"]
+        if uid_admin_auth(uid):
+            data = request.get_json()
+            offset = data.get("offset", 0) or 0
+            contents = []
+            datas = get_contents_desc_limit10(offset)
+            for row in datas:
+                if "movie" in row[3]:
+                    contentpath = get_cloudfront_url("movie", row[3])
+                else:
+                    contentpath = row[3]
+                contents.append({
+                    "contentID": row[0],        #コンテンツのID
+                    "userID": row[1],           #投稿したユーザのID
+                    "title": row[2],            #タイトル
+                    "contentpath": contentpath,      #コンテンツURL
+                    "thumbnailpath": row[4],    #サムネイルURL
+                    "posttimestamp": row[5],    #コンテンツの投稿時間
+                })
+            return jsonify({
+                "status": "success",
+                "contents" :contents
+            }), 200
         else:
             return jsonify({"status": "error", "message": "管理者以外からのアクセス"}), 400
     except Exception as e:

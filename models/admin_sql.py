@@ -212,7 +212,6 @@ def get_all_user_token():
                 """
             )
             rows = cur.fetchall()
-        # 辞書形式で返却
         return [
             {
                 "userID": row[0],
@@ -221,6 +220,143 @@ def get_all_user_token():
             }
             for row in rows
         ]
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+def statistics_data():
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+            """
+                SELECT COUNT(*) AS total_users,(SELECT COUNT(*) AS total_contents
+                FROM content)
+                FROM "user";
+            """
+            ,())
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+# ID降順で最新ユーザーを取得（最大10件）
+def get_users_desc_limit10(offset):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT userID, username, iconimgpath, id
+                  FROM "user"
+                 ORDER BY id DESC
+                 LIMIT 10 OFFSET %s;
+                """
+            ,(offset,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+# ID降順で最新コンテンツを取得（最大10件）
+def get_contents_desc_limit10(offset):
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT contentID, userID, title, contentpath, thumbnailpath, posttimestamp
+                  FROM content
+                 ORDER BY id DESC
+                 LIMIT 10 OFFSET %s;
+                """
+            ,(offset,))
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+# 通報されているコンテンツ一覧を取得
+def get_reported_contents():
+    """
+    reports.contentID に紐づく通報があるコンテンツを取得
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 
+                    c.contentID,
+                    c.userID,
+                    u.username,
+                    c.title,
+                    c.contentpath,
+                    c.thumbnailpath,
+                    COUNT(r.reportID) AS report_count
+                FROM reports r
+                JOIN content c ON r.contentID = c.contentID
+                LEFT JOIN "user" u ON c.userID = u.userID
+                GROUP BY c.contentID, c.userID, u.username, c.title, c.contentpath, c.thumbnailpath
+                ORDER BY report_count DESC, c.contentID DESC;
+                """
+            )
+            rows = cur.fetchall()
+        return rows
+    except psycopg2.Error:
+        return []
+    finally:
+        if conn:
+            release_connection(conn)
+
+
+# 通報されているコメント一覧を取得
+def get_reported_comments():
+    """
+    reports.comCTID / comCMID に紐づく通報があるコメントを取得
+    """
+    conn = None
+    try:
+        conn = get_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT 
+                    cm.contentID,
+                    cm.commentID,
+                    cm.userID,
+                    u.username,
+                    cm.commenttext,
+                    COUNT(r.reportID) AS report_count
+                FROM reports r
+                JOIN comment cm
+                  ON r.comCTID = cm.contentID
+                 AND r.comCMID = cm.commentID
+                LEFT JOIN "user" u ON cm.userID = u.userID
+                GROUP BY cm.contentID, cm.commentID, cm.userID, u.username, cm.commenttext
+                ORDER BY report_count DESC, cm.commentID DESC;
+                """
+            )
+            rows = cur.fetchall()
+        return rows
     except psycopg2.Error:
         return []
     finally:
