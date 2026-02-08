@@ -11,7 +11,7 @@ from models.admin_sql import (
 from models.deletedata import (
     delete_content_by_admin,delete_comment
 )
-from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url
+from utils.s3 import upload_to_s3, get_cloudfront_url, delete_file_from_url, normalize_content_url
 
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
@@ -412,15 +412,16 @@ def get_contents_desc_limit10_api():
             datas = get_contents_desc_limit10(offset)
             for row in datas:
                 if "movie" in row[3]:
-                    contentpath = get_cloudfront_url("movie", row[3])
+                    contentpath = normalize_content_url(row[3]) if row[3] else None
                 else:
                     contentpath = row[3]
+                thumbnailpath = normalize_content_url(row[4]) if row[4] else None
                 contents.append({
                     "contentID": row[0],        #コンテンツのID
                     "userID": row[1],           #投稿したユーザのID
                     "title": row[2],            #タイトル
                     "contentpath": contentpath,      #コンテンツURL
-                    "thumbnailpath": row[4],    #サムネイルURL
+                    "thumbnailpath": thumbnailpath,    #サムネイルURL
                     "posttimestamp": row[5],    #コンテンツの投稿時間
                 })
             return jsonify({
