@@ -280,7 +280,7 @@ def get_contents_desc_limit10(offset):
                 """
                 SELECT contentID, userID, title, contentpath, thumbnailpath, posttimestamp
                   FROM content
-                 ORDER BY id DESC
+                 ORDER BY posttimestamp DESC
                  LIMIT 10 OFFSET %s;
                 """
             ,(offset,))
